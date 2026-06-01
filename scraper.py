@@ -249,7 +249,7 @@ def upsert_artists(supabase: Client, artists: list, trends: dict, news: dict):
         rows.append({
             "name":       name,
             "role":       a["role"],
-            "show":       a["show"],
+            "show_name":   a["show"],
             "genre":      a["genre"],
             "score":      score,
             "trend":      score_to_trend(score, prev_score),
