@@ -613,23 +613,269 @@ function renderArtists(){
   requestAnimationFrame(drawAllSparks);
 }
 
+// ── LIVE DATA CONNECTION (auto-inserted) ──
+// ═══════════════════════════════════════════════════════════════════════════
+// SUPABASE LIVE DATA CONNECTION
+// Replace YOUR_ANON_KEY_HERE with your anon public key from Supabase
+// Settings → API → anon public
+//
+// Paste this entire block just before the closing </script> tag in index.html
+// It replaces all mock data with live data from Supabase on every page load
+// ═══════════════════════════════════════════════════════════════════════════
 
-
-  // Load live data from Supabase
 const SB_URL = 'https://elcwdfrndqpjxsdsvcso.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsY3dkZnJuZHFwanhzZHN2Y3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDAxODIsImV4cCI6MjA5NTg3NjE4Mn0.IEXDINz0VT8XkXMFucqKdR6A8XgInA25qvxda278FkM';  // use the anon key, not service_role
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsY3dkZnJuZHFwanhzZHN2Y3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDAxODIsImV4cCI6MjA5NTg3NjE4Mn0.IEXDINz0VT8XkXMFucqKdR6A8XgInA25qvxda278FkM';
 
-fetch(`${SB_URL}/rest/v1/shows?select=*&order=score.desc`, {
-  headers: {
-    'apikey': SB_KEY,
-    'Authorization': `Bearer ${SB_KEY}`
+const SB_HEADERS = {
+  'apikey': SB_KEY,
+  'Authorization': `Bearer ${SB_KEY}`,
+  'Content-Type': 'application/json',
+};
+
+// ── FETCH FROM SUPABASE ───────────────────────────────────────────────────
+
+async function sbFetch(table, params = '') {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
+    headers: SB_HEADERS,
+  });
+  if (!res.ok) throw new Error(`Supabase error: ${res.status} on ${table}`);
+  return res.json();
+}
+
+// ── MAP SUPABASE ROWS → DRAMA format ─────────────────────────────────────
+
+function mapShows(rows) {
+  // Group by genre
+  const byGenre = { all: [], kdrama: [], cdrama: [], local: [], thai: [], western: [], others: [] };
+
+  rows.forEach(row => {
+    const show = {
+      g:      row.genre,
+      name:   row.name,
+      cn:     row.chinese_title || null,
+      isNew:  row.status === 'New ep',
+      plat:   row.platforms || [],
+      ctx:    row.context || '',
+      desc:   row.description || '',
+      spark:  row.sparkline_shape || 'stable',
+    };
+    byGenre.all.push(show);
+    if (byGenre[row.genre]) byGenre[row.genre].push(show);
+  });
+
+  return byGenre;
+}
+
+function mapScores(rows) {
+  // Returns arrays indexed by position in rows
+  const scores   = { today: [], '7d': [], '30d': [], '3m': [] };
+  const statuses = { today: [], '7d': [], '30d': [], '3m': [] };
+  const vols     = { today: [], '7d': [], '30d': [], '3m': [] };
+
+  rows.forEach(row => {
+    const s = Math.round(row.score || 0);
+    ['today','7d','30d','3m'].forEach(p => {
+      scores[p].push(s);
+      statuses[p].push(row.status || 'Stable');
+      vols[p].push(formatVol(row.search_volume || 0));
+    });
+  });
+
+  return { scores, statuses, vols };
+}
+
+function mapArtists(rows) {
+  const byGenre = { all: [], kdrama: [], cdrama: [], local: [], thai: [], western: [], others: [] };
+
+  rows.forEach(row => {
+    const artist = {
+      g:     row.genre,
+      name:  row.name,
+      role:  row.role || 'Actor',
+      show:  row.show || '',
+      score: Math.round(row.score || 0),
+      vol:   formatVol(row.search_volume || 0),
+      trend: row.trend || '→',
+      spark: row.sparkline_shape || 'stable',
+    };
+    byGenre.all.push(artist);
+    if (byGenre[row.genre]) byGenre[row.genre].push(artist);
+  });
+
+  return byGenre;
+}
+
+function mapEvents(rows) {
+  const byGenre = { all: [], kdrama: [], cdrama: [], local: [], thai: [], western: [], others: [] };
+
+  rows.forEach(row => {
+    const event = {
+      g:      row.genre,
+      title:  row.title,
+      type:   row.type || 'Event',
+      date:   row.event_date || '',
+      venue:  row.venue || '',
+      status: row.status || 'Upcoming',
+      hot:    Math.round(row.hot_score || 0),
+      vol:    row.search_vol || '0k',
+      spark:  row.sparkline_shape || 'stable',
+      desc:   row.description || '',
+      links:  row.links || [],
+    };
+    byGenre.all.push(event);
+    if (byGenre[row.genre]) byGenre[row.genre].push(event);
+  });
+
+  return byGenre;
+}
+
+function mapRanks(rows, field = 'score') {
+  // Build genre breakdown percentages from live scores
+  const totals = {};
+  rows.forEach(r => {
+    totals[r.genre] = (totals[r.genre] || 0) + (r[field] || 0);
+  });
+  const grand = Object.values(totals).reduce((a,b) => a+b, 0) || 1;
+
+  const ranks = {};
+  const statusMap = { kdrama:'Viral', cdrama:'Hot', local:'Rising', thai:'Rising', western:'Stable', others:'Rising' };
+  const bsMap = {
+    Viral:  'background:#FCEBEB;color:#791F1F;',
+    Hot:    'background:#FAECE7;color:#993C1D;',
+    Rising: 'background:#FAEEDA;color:#633806;',
+    Stable: 'background:#EAF3DE;color:#27500A;',
+    Fading: 'background:#EAF3DE;color:#27500A;',
+  };
+
+  ['kdrama','cdrama','local','thai','western','others'].forEach(g => {
+    const pct = Math.round(((totals[g] || 0) / grand) * 100);
+    const badge = statusMap[g] || 'Stable';
+    ranks[g] = { pct, badge, bs: bsMap[badge] };
+  });
+
+  // Ensure percentages add up to 100
+  const total = Object.values(ranks).reduce((a,b) => a + b.pct, 0);
+  if (total !== 100) ranks.kdrama.pct += (100 - total);
+
+  return ranks;
+}
+
+function formatVol(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return (n/1000).toFixed(1) + 'k';
+  return String(n);
+}
+
+function buildKPI(showRows, label1, label2) {
+  const sorted = [...showRows].sort((a,b) => b.score - a.score);
+  const top = sorted[0] || {};
+  const genreTotals = {};
+  showRows.forEach(r => genreTotals[r.genre] = (genreTotals[r.genre]||0) + (r.score||0));
+  const topGenreKey = Object.entries(genreTotals).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'kdrama';
+  const topGenreLabel = DG[topGenreKey]?.label || 'K-Drama';
+  const totalSearches = showRows.reduce((a,r) => a + (r.search_volume||0), 0);
+
+  return {
+    today: {
+      searches:   formatVol(totalSearches) || '–',
+      searchesSub:'Updated ' + new Date().toLocaleDateString('en-SG'),
+      top1:       topGenreLabel,
+      top1sub:    `${genreTotals[topGenreKey]?.toFixed(0) || 0} score total`,
+      top2:       top.name || '–',
+      top2sub:    `Score ${Math.round(top.score||0)} · ${top.status||''}`,
+    },
+  };
+}
+
+// ── SHOW LOADING STATE ────────────────────────────────────────────────────
+
+function showLoadingState() {
+  document.getElementById('panel').innerHTML = `
+    <div style="padding:48px 20px;text-align:center;color:var(--t3);">
+      <div style="font-size:28px;margin-bottom:10px;">⏳</div>
+      <div style="font-size:13px;color:var(--t2);">Loading live data from Supabase…</div>
+    </div>`;
+}
+
+function showErrorState(msg) {
+  document.getElementById('panel').innerHTML = `
+    <div style="padding:48px 20px;text-align:center;color:var(--t3);">
+      <div style="font-size:28px;margin-bottom:10px;">⚠️</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:6px;">Could not load live data</div>
+      <div style="font-size:11px;color:var(--t3);">Showing mock data instead. Error: ${msg}</div>
+    </div>`;
+}
+
+// ── MAIN LOADER ───────────────────────────────────────────────────────────
+
+async function loadLiveData() {
+  showLoadingState();
+
+  try {
+    // Fetch all tables in parallel
+    const [showRows, artistRows, eventRows] = await Promise.all([
+      sbFetch('shows',   'select=*&order=score.desc'),
+      sbFetch('artists', 'select=*&order=score.desc'),
+      sbFetch('events',  'select=*&order=hot_score.desc'),
+    ]);
+
+    console.log(`✅ Loaded: ${showRows.length} shows, ${artistRows.length} artists, ${eventRows.length} events`);
+
+    // Only replace mock data if we actually got rows back
+    if (showRows.length > 0) {
+      // Replace DRAMA with live data
+      const liveDrama = mapShows(showRows);
+      Object.assign(DRAMA, liveDrama);
+
+      // Replace scores/status/vol
+      const { scores, statuses, vols } = mapScores(showRows);
+      Object.assign(D_SCORES,  scores);
+      Object.assign(D_STATUS,  statuses);
+      Object.assign(D_VOL,     vols);
+
+      // Replace genre ranks
+      const liveRanks = mapRanks(showRows);
+      ['today','7d','30d','3m'].forEach(p => Object.assign(D_RANKS[p], liveRanks));
+    }
+
+    if (artistRows.length > 0) {
+      const liveArtists = mapArtists(artistRows);
+      Object.assign(ARTISTS, liveArtists);
+    }
+
+    if (eventRows.length > 0) {
+      const liveEvents = mapEvents(eventRows);
+      Object.assign(EVENTS, liveEvents);
+    }
+
+    // Update the live badge to show last updated time
+    const lastUpdated = showRows[0]?.updated_at
+      ? new Date(showRows[0].updated_at).toLocaleTimeString('en-SG', { hour:'2-digit', minute:'2-digit' })
+      : null;
+    if (lastUpdated) {
+      document.querySelector('.live-pill').innerHTML =
+        `<span class="ldot"></span>Live · Updated ${lastUpdated}`;
+    }
+
+    // Remove mock tag
+    const mockTag = document.querySelector('.mock-tag');
+    if (mockTag) mockTag.remove();
+
+  } catch (err) {
+    console.warn('⚠️ Supabase fetch failed, using mock data:', err.message);
+    // Falls back to mock data silently — site still works
   }
-})
-.then(r => r.json())
-.then(data => console.log('Live shows data:', data));
-  
 
-updateAll();
+  // Always call updateAll — uses live data if loaded, mock data if not
+  updateAll();
+}
+
+// Start loading live data instead of mock data
+loadLiveData();
+
+// ── AUTO REFRESH every 30 minutes ────────────────────────────────────────
+setInterval(loadLiveData, 30 * 60 * 1000);
+
 </script>
 </body>
 </html>
