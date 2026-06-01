@@ -613,6 +613,22 @@ function renderArtists(){
   requestAnimationFrame(drawAllSparks);
 }
 
+
+
+  // Load live data from Supabase
+const SB_URL = 'https://elcwdfrndqpjxsdsvcso.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsY3dkZnJuZHFwanhzZHN2Y3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDAxODIsImV4cCI6MjA5NTg3NjE4Mn0.IEXDINz0VT8XkXMFucqKdR6A8XgInA25qvxda278FkM';  // use the anon key, not service_role
+
+fetch(`${SB_URL}/rest/v1/shows?select=*&order=score.desc`, {
+  headers: {
+    'apikey': SB_KEY,
+    'Authorization': `Bearer ${SB_KEY}`
+  }
+})
+.then(r => r.json())
+.then(data => console.log('Live shows data:', data));
+  
+
 updateAll();
 </script>
 </body>
