@@ -23,7 +23,7 @@ drama-watch-sg/
 3. Go to SQL Editor → paste contents of `supabase-schema.sql` → Run
 4. Go to Settings → API → copy your Project URL and anon key
 
-### 2. Reddit API
+### 2. Reddit API (not added)
 1. Go to https://www.reddit.com/prefs/apps
 2. Click "create another app" → select "script"
 3. Copy your client ID and secret
