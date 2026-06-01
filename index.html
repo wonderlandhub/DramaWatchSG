@@ -364,104 +364,49 @@ const EV_ICONS = {
   'Workshop':'✏️','Convention':'🎭','Watch Party':'📺','Film Festival':'🎞️','Forum':'💬','Premiere':'🌟','Fan Event':'🎊',
 };
 
-// ── MOCK DATA ─────────────────────────────────────
-// NOTE: In production, replace this entire section with a Supabase fetch:
-// const res = await fetch('https://YOUR_PROJECT.supabase.co/rest/v1/shows?select=*&order=score.desc', {
-//   headers: { 'apikey': 'YOUR_ANON_KEY', 'Authorization': 'Bearer YOUR_ANON_KEY' }
-// });
-// const DATA = await res.json();
+// ── DATA (populated from Supabase on page load) ────────────────────────────
+// All mock data removed — Supabase is the single source of truth.
+// These empty objects are filled by loadLiveData() below.
 
-const DRAMA = {
-  all:[
-    {g:'kdrama',name:'Queen of Tears',cn:null,isNew:true,plat:['netflix'],ctx:'Finale week — SG fans camping online',desc:'A chaebol heiress and her husband navigate a crumbling marriage until a terminal diagnosis forces them to rediscover their love.',spark:'surge'},
-    {g:'cdrama',name:'The Story of Rose',cn:'玫瑰的故事',isNew:false,plat:['wetv'],ctx:'Sparking debates about modern womanhood',desc:'A stunning woman navigates love, career, and identity across different life stages. Massive discussions across SG.',spark:'rise'},
-    {g:'kdrama',name:'Lovely Runner',cn:null,isNew:true,plat:['netflix'],ctx:'New episode — SG feeds flooded',desc:'A time-travel romance where a wheelchair-bound fan saves her idol, only to fall deeply in love.',spark:'newentry'},
-    {g:'local',name:'Code of Law 5',cn:'判决 5',isNew:false,plat:['ch5','mewatch'],ctx:'Cybercrime plotline hitting close to home',desc:"Singapore's long-running legal drama returns with new cases tackling cybercrime and corporate fraud.",spark:'rise'},
-    {g:'kdrama',name:'Marry My Husband',cn:null,isNew:false,plat:['netflix'],ctx:'Rewatching wave after finale',desc:'A woman who dies betrayed gets a second chance — goes back 10 years to ruin their lives.',spark:'fall'},
-    {g:'others',name:'Dirilis: Ertugrul',cn:null,isNew:false,plat:['netflix','youtube'],ctx:'Turkish epic — SG Malay community very active',desc:'Epic Turkish historical drama about the founding of the Ottoman Empire. Massive loyal SG following.',spark:'stable'},
-    {g:'western',name:'Bridgerton S3',cn:null,isNew:false,plat:['netflix'],ctx:'Penelope-Colin arc driving SG engagement',desc:"Colin and Penelope's slow-burn romance finally ignites. Lush, romantic, Regency-era drama.",spark:'stable'},
-    {g:'cdrama',name:'Blossoms Shanghai',cn:'繁花',isNew:false,plat:['iqiyi','wetv'],ctx:'Wong Kar-wai fans still recommending',desc:'Set in 1990s Shanghai, three men chase wealth and ambition. Directed by Wong Kar-wai.',spark:'classic'},
-  ],
-  kdrama:[
-    {g:'kdrama',name:'Queen of Tears',cn:null,isNew:true,plat:['netflix'],ctx:'Finale week — SG fans camping online',desc:'A chaebol heiress and her husband navigate a crumbling marriage until a terminal diagnosis forces them to rediscover their love.',spark:'surge'},
-    {g:'kdrama',name:'Lovely Runner',cn:null,isNew:true,plat:['netflix'],ctx:'New episode — SG feeds flooded',desc:'A time-travel romance where a wheelchair-bound fan saves her idol, only to fall deeply in love.',spark:'newentry'},
-    {g:'kdrama',name:'Marry My Husband',cn:null,isNew:false,plat:['netflix'],ctx:'Rewatching wave after finale',desc:'A woman who dies betrayed gets a second chance — goes back 10 years to ruin their lives.',spark:'fall'},
-    {g:'kdrama',name:'My Demon',cn:null,isNew:false,plat:['netflix'],ctx:'Post-finale — still discussed',desc:'A CEO and a demon bound by a mysterious mark. Supernatural thriller meets slow-burn romance.',spark:'fall'},
-    {g:'kdrama',name:'Doctor Slump',cn:null,isNew:false,plat:['netflix'],ctx:'Burnout storyline resonated deeply',desc:'Two former rivals hit rock bottom and end up as neighbours. Heartfelt and deeply relatable.',spark:'stable'},
-    {g:'kdrama',name:'Crash Course in Romance',cn:null,isNew:false,plat:['netflix'],ctx:'Education satire drew SG parents and students',desc:'A top tutor and banchan shop owner collide in the cutthroat world of Korean education.',spark:'stable'},
-    {g:'kdrama',name:'Strong Girl Nam-soon',cn:null,isNew:false,plat:['netflix'],ctx:'Mixed reviews but lead actress trending',desc:'A girl with superhuman strength returns to Korea straight into a drug syndicate conspiracy.',spark:'fall'},
-    {g:'kdrama',name:'My Love from the Star',cn:null,isNew:false,plat:['netflix'],ctx:'Timeless rewatch — steady long-tail searches',desc:'An alien stranded on Earth for 400 years falls in love with a top actress. Still rewatched constantly.',spark:'classic'},
-  ],
-  cdrama:[
-    {g:'cdrama',name:'The Story of Rose',cn:'玫瑰的故事',isNew:false,plat:['wetv'],ctx:'Sparking debates about modern womanhood',desc:'A woman navigates love, career, and identity across different life stages.',spark:'rise'},
-    {g:'cdrama',name:'Blossoms Shanghai',cn:'繁花',isNew:false,plat:['iqiyi','wetv'],ctx:'Wong Kar-wai fans still recommending',desc:'Set in 1990s Shanghai, three men chase wealth and ambition. Directed by Wong Kar-wai.',spark:'classic'},
-    {g:'cdrama',name:'The Double',cn:'墨雨云间',isNew:true,plat:['netflix'],ctx:'Revenge plot — strong word-of-mouth',desc:'A noblewoman swaps identities with her maid and plots meticulous revenge.',spark:'newentry'},
-    {g:'cdrama',name:'Go Ahead',cn:'以家人之名',isNew:false,plat:['iqiyi'],ctx:'Still recommended in SG family drama groups',desc:'Three children from broken families form an unbreakable bond — until adulthood tests everything.',spark:'stable'},
-    {g:'cdrama',name:'Nirvana in Fire',cn:'琅琊榜',isNew:false,plat:['iqiyi'],ctx:'Gold standard — still pulling new SG viewers',desc:'A disgraced general returns as a strategist to restore justice. One of the greatest C-dramas ever.',spark:'classic'},
-    {g:'cdrama',name:'The Long Ballad',cn:'长歌行',isNew:false,plat:['wetv'],ctx:'Historical romance fans trickling in',desc:'A Tang Dynasty princess disguises herself as a man after her family is massacred.',spark:'stable'},
-    {g:'cdrama',name:'Love Like the Galaxy',cn:'星汉灿烂',isNew:false,plat:['wetv'],ctx:'Loved by SG xianxia fans',desc:"A neglected general's daughter rises through the imperial court.",spark:'stable'},
-    {g:'cdrama',name:'Ancient Love Poetry',cn:'千古玦尘',isNew:false,plat:['wetv'],ctx:'Fantasy romance — active SG audience',desc:'An ancient goddess awakens with no memories, entangled in a love spanning thousands of years.',spark:'stable'},
-  ],
-  local:[
-    {g:'local',name:'Code of Law 5',cn:'判决 5',isNew:false,plat:['ch5','mewatch'],ctx:'Cybercrime plotline hitting close to home',desc:"Singapore's long-running legal drama returns with new cases tackling cybercrime and corporate fraud.",spark:'rise'},
-    {g:'local',name:'The Kitchen Musical 2',cn:'美食天王 2',isNew:false,plat:['ch8','mewatch'],ctx:'Food drama always lands in SG',desc:'The beloved local food competition drama returns with a new generation of chefs.',spark:'stable'},
-    {g:'local',name:'Extraordinary Affairs',cn:'非常事务',isNew:false,plat:['mewatch'],ctx:'SG civil servant humour — niche but loyal',desc:'A black comedy following a civil servant entangled in a bureaucratic conspiracy.',spark:'stable'},
-    {g:'local',name:'Tanglin',cn:null,isNew:false,plat:['ch5','mewatch'],ctx:'Long-running comfort watch',desc:'A long-running SG drama following families from different backgrounds.',spark:'stable'},
-    {g:'local',name:'Little Nyonya 2',cn:'小娘惹 2',isNew:true,plat:['ch8','mewatch'],ctx:'Anticipation high — original was iconic',desc:'The sequel to the iconic Peranakan drama revisits descendants of the original family.',spark:'newentry'},
-    {g:'local',name:'The Good Fight SG',cn:'正义之战',isNew:false,plat:['ch8','mewatch'],ctx:'Grounded SG courtroom authenticity',desc:'A veteran defence lawyer confronts the moral grey zones of justice in modern Singapore.',spark:'stable'},
-    {g:'local',name:'Masters of the Sea',cn:'怒海明珠',isNew:false,plat:['ch8','mewatch'],ctx:'Historical epic — heritage buffs in SG',desc:'Hokkien merchants navigating the South China Sea in colonial-era Singapore.',spark:'stable'},
-    {g:'local',name:'Lion Mums 3',cn:'狮子妈妈 3',isNew:false,plat:['ch5','mewatch'],ctx:'Tiger mum humour — viewership slipping',desc:'Fiercely competitive Singapore mothers juggling parenting, relationships, and ambition.',spark:'fall'},
-  ],
-  thai:[
-    {g:'thai',name:'Only Friends',cn:null,isNew:false,plat:['gmmtv','wetv'],ctx:'BL community very active',desc:'University friends navigate love and desire in a sun-soaked Thai summer.',spark:'stable'},
-    {g:'thai',name:'Hidden Agenda',cn:null,isNew:false,plat:['gmmtv','wetv'],ctx:'Quietly climbing — word-of-mouth driven',desc:'Two university students thrown together — one hiding an ulterior motive.',spark:'rise'},
-    {g:'thai',name:'Not Me',cn:null,isNew:false,plat:['gmmtv','wetv'],ctx:'Political thriller drew SG viewers beyond BL',desc:'A man impersonates his twin to infiltrate activists.',spark:'stable'},
-    {g:'thai',name:'2gether The Series',cn:null,isNew:false,plat:['gmmtv','wetv'],ctx:'Thai BL pioneer — long tail rewatches',desc:'The Thai BL drama that sparked a global wave. Charming and utterly rewatchable.',spark:'classic'},
-    {g:'thai',name:'My School President',cn:null,isNew:false,plat:['gmmtv','wetv'],ctx:'Sweet BL — niche but loyal SG fanbase',desc:'A school band president and transfer student fall for each other through music.',spark:'stable'},
-    {g:'thai',name:'A Tale of Thousand Stars',cn:null,isNew:false,plat:['gmmtv','wetv'],ctx:'Scenic Thai countryside — travel curiosity',desc:"A city boy travels to a remote village to fulfil his heart donor's last wish.",spark:'stable'},
-    {g:'thai',name:'Enchanted',cn:null,isNew:true,plat:['gmmtv','wetv'],ctx:'New entry gaining SG traction',desc:'A modern woman transported to an ancient kingdom falls for a prince with a dangerous secret.',spark:'newentry'},
-    {g:'thai',name:'Fish Upon the Sky',cn:null,isNew:false,plat:['gmmtv','wetv'],ctx:'Feel-good campus romance',desc:'A clumsy student accidentally confesses to the wrong person.',spark:'stable'},
-  ],
-  western:[
-    {g:'western',name:'Bridgerton S3',cn:null,isNew:false,plat:['netflix'],ctx:'Penelope-Colin arc driving SG engagement',desc:"Colin and Penelope's slow-burn romance finally ignites. Lush and romantic.",spark:'stable'},
-    {g:'western',name:'The Crown S6',cn:null,isNew:false,plat:['netflix'],ctx:'Royal family discussions in SG expat circles',desc:"Final season covers Diana's last years and William & Kate's early relationship.",spark:'fall'},
-    {g:'western',name:'Emily in Paris S4',cn:null,isNew:false,plat:['netflix'],ctx:'Guilty pleasure — love-hate relationship',desc:'Emily continues juggling work and croissants — this time sending her to Rome.',spark:'stable'},
-    {g:'western',name:'Virgin River S6',cn:null,isNew:false,plat:['netflix'],ctx:'Cosy small-town romance — loyal SG audience',desc:'Mel and Jack face new challenges in the idyllic small town of Virgin River.',spark:'stable'},
-    {g:'western',name:'Outlander S7',cn:null,isNew:false,plat:['netflix'],ctx:'Epic time-travel romance winding down',desc:'Jamie and Claire navigate the American Revolution.',spark:'fall'},
-    {g:'western',name:'Sweet Magnolias S4',cn:null,isNew:false,plat:['netflix'],ctx:'Weekend binge comfort pick',desc:'Three best friends run a spa while juggling love lives and family drama.',spark:'stable'},
-    {g:'western',name:'Downton Abbey S7',cn:null,isNew:false,plat:['disney'],ctx:'Period drama loyalists — grand finale',desc:"The Crawley family's final chapter through the changing tides of 1920s England.",spark:'classic'},
-    {g:'western',name:'Suits S10',cn:null,isNew:false,plat:['netflix'],ctx:'Netflix revival — SG legal drama fans',desc:'The legal drama returns with new associates at a top New York law firm.',spark:'rise'},
-  ],
-  others:[
-    {g:'others',name:'Dirilis: Ertugrul',cn:null,isNew:false,plat:['netflix','youtube'],ctx:'Turkish epic — SG Malay community very active',desc:'Epic Turkish historical drama about the founding of the Ottoman Empire.',spark:'stable'},
-    {g:'others',name:'Oshin',cn:null,isNew:false,plat:['youtube'],ctx:'J-Drama classic — nostalgia wave in SG',desc:'The iconic Japanese drama about resilience. Nostalgia revival among older SG viewers.',spark:'classic'},
-    {g:'others',name:'Scam 1992',cn:null,isNew:false,plat:['zee5'],ctx:'Indian drama — SG viewers calling it must-watch',desc:'Critically acclaimed Indian drama about the Harshad Mehta stock market scandal.',spark:'rise'},
-    {g:'others',name:'Hana Yori Dango',cn:null,isNew:false,plat:['netflix','viu'],ctx:'J-Drama — younger SG viewers discovering it',desc:'The iconic Japanese drama that inspired Boys Over Flowers.',spark:'rise'},
-    {g:'others',name:'Kumkum Bhagya',cn:null,isNew:false,plat:['zee5'],ctx:'Hindi drama — SG Indian community following',desc:'Long-running Indian soap opera with a dedicated SG following.',spark:'stable'},
-    {g:'others',name:'Dirilis: Kurulus Osman',cn:null,isNew:false,plat:['netflix'],ctx:'Turkish sequel — Ertugrul fans following on',desc:'The sequel to Ertugrul — same loyal SG Malay community.',spark:'stable'},
-    {g:'others',name:'GTO: Great Teacher Onizuka',cn:null,isNew:false,plat:['viu','youtube'],ctx:'J-Drama revival — SG Gen X nostalgia',desc:'Great Teacher Onizuka experiencing a revival among SG Gen X viewers.',spark:'classic'},
-    {g:'others',name:'Crash Landing on You (Filipino)',cn:null,isNew:false,plat:['netflix'],ctx:'Filipino remake — SG comparison buzz',desc:'Filipino remake generating discussion comparing with the Korean original.',spark:'stable'},
-  ],
+const DRAMA   = { all:[], kdrama:[], cdrama:[], local:[], thai:[], western:[], others:[] };
+const ARTISTS = { all:[], kdrama:[], cdrama:[], local:[], thai:[], western:[], others:[] };
+const EVENTS  = { all:[], kdrama:[], cdrama:[], local:[], thai:[], western:[], others:[] };
+
+const D_SCORES = { today:[], '7d':[], '30d':[], '3m':[] };
+const D_STATUS = { today:[], '7d':[], '30d':[], '3m':[] };
+const D_VOL    = { today:[], '7d':[], '30d':[], '3m':[] };
+
+const D_RANKS = {
+  today: { kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'} },
+  '7d':  { kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'} },
+  '30d': { kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'} },
+  '3m':  { kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}, others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'} },
 };
-const D_SCORES={today:[97,83,76,61,64,68,64,52],'7d':[91,79,74,58,70,62,70,55],'30d':[78,72,65,60,88,58,64,58],'3m':[65,75,55,62,70,52,70,82]};
-const D_STATUS={today:['Viral','Hot','New ep','Rising','Stable','Hot','Stable','Classic'],'7d':['Viral','Hot','Rising','Rising','Hot','Stable','Hot','Classic'],'30d':['Fading','Hot','Fading','Stable','Viral','Stable','Hot','Classic'],'3m':['Fading','Rising','Fading','Stable','Hot','Fading','Hot','Classic']};
-const D_VOL={today:['9.2k','3.9k','5.8k','2.2k','4.1k','4.5k','4.1k','2.1k'],'7d':['62k','27k','41k','15k','29k','31k','29k','15k'],'30d':['241k','105k','158k','59k','112k','118k','112k','58k'],'3m':['680k','310k','440k','165k','320k','330k','320k','175k']};
-const D_RANKS={today:{kdrama:{pct:40,badge:'Viral',bs:'background:#FCEBEB;color:#791F1F;'},cdrama:{pct:20,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},local:{pct:12,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:7,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:4,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:17,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'}},'7d':{kdrama:{pct:42,badge:'Viral',bs:'background:#FCEBEB;color:#791F1F;'},cdrama:{pct:19,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},local:{pct:11,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:7,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:4,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:17,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'}},'30d':{kdrama:{pct:38,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},cdrama:{pct:21,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},local:{pct:13,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:8,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:4,badge:'Fading',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:16,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}},'3m':{kdrama:{pct:36,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:23,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},local:{pct:14,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:8,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:3,badge:'Fading',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:16,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}};
-const D_CHART={today:{labels:['6am','12pm','6pm','12am'],kdrama:[18,22,24,24],cdrama:[7,8,9,9],local:[3,4,5,5]},'7d':{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],kdrama:[18,20,21,22,23,24,24],cdrama:[7,7,8,8,9,9,9],local:[3,3,4,4,5,5,5]},'30d':{labels:['W1','W2','W3','W4'],kdrama:[20,22,21,24],cdrama:[8,9,8,9],local:[3,4,4,5]},'3m':{labels:['Mar','Apr','May'],kdrama:[19,21,23],cdrama:[7,9,9],local:[3,4,5]}};
-const D_KPI={today:{searches:'41.3k',searchesSub:'+34% vs yesterday',top1:'K-Drama',top1sub:'40% share · 16.5k searches',top2:'Queen of Tears',top2sub:'Score 97 · Viral'},'7d':{searches:'287k',searchesSub:'+22% vs prev 7 days',top1:'K-Drama',top1sub:'42% share',top2:'Queen of Tears',top2sub:'Avg score 91'},'30d':{searches:'1.2M',searchesSub:'+18% vs prev 30 days',top1:'K-Drama',top1sub:'38% share',top2:'Marry My Husband',top2sub:'Avg score 88'},'3m':{searches:'3.6M',searchesSub:'+41% vs prev quarter',top1:'K-Drama',top1sub:'36% share',top2:'Nirvana in Fire',top2sub:'Highest sustained score'}};
-const SHOW_INSIGHTS={all:{today:['Queen of Tears finale driving K-Drama to 40% of all drama searches','Others at 17% — Turkish and J-Drama active in Malay and Gen X communities','Local content having its best search week in 2 months'],'7d':['K-Drama dominant all week at 42% — finale effect sustained','Others steady — Turkish community searches spike on weekends','C-Drama gaining share vs last week'],'30d':['C-Drama grew from 18% → 21% share this month','Marry My Husband was top show W1–W2 before Lovely Runner overtook','Others stable at 16% — underrated but loyal category'],'3m':['C-Drama grew from 18% → 23% over the quarter','Local quietly climbing each month — +4% share from Mar to May','K-Drama eased from 42% → 36% as other genres grew']},kdrama:{today:['Queen of Tears score 97 — all-time high for any show on this tracker','Byeon Woo-seok search surge from Lovely Runner new episode tonight','Marry My Husband rewatch wave still active 3 weeks post-finale'],'7d':['Lovely Runner entered top 3 mid-week — strong new episode momentum','Queen of Tears held #1 all 7 days — no other show came close','Doctor Slump steady — burnout theme still resonating'],'30d':['Marry My Husband dominated W1–W2 before Lovely Runner surge in W3','My Love from the Star long-tail searches stable throughout','K-Drama maintained 38% genre share despite C-Drama growth'],'3m':['Queen of Tears was the biggest K-Drama moment this quarter','K-Drama eased from 42% to 36% as C-Drama and others grew','Crash Course in Romance faded post-finale in April']},cdrama:{today:['The Story of Rose sparking gender discussions on Reddit r/singapore','Blossoms Shanghai steady — Wong Kar-wai fans actively recommending','The Double new episode driving first-time discovery searches'],'7d':['The Double gaining fast — new episode every week driving fresh searches','The Story of Rose held top C-Drama spot all 7 days','Nirvana in Fire long-tail searches driven by Reddit recommendations'],'30d':['C-Drama grew from 18% → 21% of all drama searches this month','Blossoms Shanghai drove W1 spike after a viral Reddit thread','Go Ahead and Nirvana in Fire both performing strongly as classic rewatches'],'3m':['C-Drama biggest growth category this quarter — up 5% share','The Story of Rose carried C-Drama momentum from April through May','Nirvana in Fire consistently in top 2 C-Drama shows all quarter']},local:{today:['Code of Law 5 cybercrime plot connecting with SG viewers on a local level','Little Nyonya 2 anticipation searches growing daily as premiere approaches','Kitchen Musical 2 holding steady Channel 8 primetime ratings'],'7d':['Local content best search week in 2 months','Little Nyonya 2 preview announcement drove a sharp mid-week search spike','Code of Law 5 held #1 local drama spot all 7 days'],'30d':['Local grew from 10% → 13% search share — a meaningful positive trend','Little Nyonya 2 announcement was the key driver in W3','Masters of the Sea drawing a steady heritage-interested audience'],'3m':['Local quietly grew each month from March to May','Code of Law 5 most consistent local drama performer this quarter','Little Nyonya 2 excitement building since the April announcement']},thai:{today:['Only Friends BL community very active on Reddit','Enchanted is a new entry — GMMTV fans discovering it this week','2gether rewatch wave steady among SG BL drama fans'],'7d':['GMMTV content holding 7% of drama searches all week','Only Friends top Thai drama all 7 days — strong fanbase loyalty','Hidden Agenda climbing via word-of-mouth — no paid promotion'],'30d':['Thai drama holding 7–8% search share consistently','Enchanted new entry boosted Thai share in W4','BL community drives the majority of Thai drama search activity in SG'],'3m':['Thai drama grew from 6% → 8% search share over the quarter','GMMTV new releases drove the Thai drama spikes in April and May','BL genre is the primary driver of Thai drama growth in SG']},western:{today:['Bridgerton S3 Penelope-Colin arc still generating SG social discussion','The Crown steady — SG expat community engaged with the final season','Emily in Paris guilty pleasure searches ticking up this week'],'7d':['Western at 4% — no major new releases this week','Bridgerton S3 holding as top Western drama for the 4th week','Outlander S7 finale discussion active in SG Reddit and Facebook groups'],'30d':['Western declining — 4% down from 6% last month','No major new Western drama released this period','Suits S10 revival giving Western a small but sustained lift'],'3m':['Western fell from 7% → 3% search share over the quarter','Bridgerton S3 was the last major Western surge — back in March','SG Western drama audience migrating toward K-Drama and C-Drama']},others:{today:['Ertugrul searches active — Malay community Turkish drama loyalty remains strong','Oshin nostalgia wave — older SG viewers discovering it on YouTube','Scam 1992 word-of-mouth growing among SG Indian professionals'],'7d':['Others stable at 17% all week — loyal niche audiences consistent','Turkish dramas driving the largest share of Others searches','J-Drama nostalgia content growing steadily on YouTube SG'],'30d':['Others stable at 16% — underrated but extremely loyal category','Turkish drama the strongest performer within Others category','Indian drama growing — Scam 1992 word-of-mouth building'],'3m':['Others held 16–17% search share consistently all quarter','Turkish drama consistently the anchor of the Others category','J-Drama growing slowly as younger SG viewers discover the classics']}};
 
-const EVENTS={all:[{g:'kdrama',title:'Queen of Tears fan meet — SG',type:'Fan Meet',date:'Jun 14–15',venue:'The Star Theatre',status:'Upcoming',hot:94,vol:'6.8k',spark:'surge',desc:'Kim Soo-hyun and Kim Ji-won confirmed for Singapore fan meet. Limited tickets via SISTIC — expected to sell out instantly.',links:[{l:'SISTIC',u:'https://www.sistic.com.sg'}]},{g:'kdrama',title:'Netflix K-Drama pop-up — VivoCity',type:'Pop-Up',date:'Jun 8–30',venue:'VivoCity L1',status:'Ongoing',hot:81,vol:'4.2k',spark:'rise',desc:'Netflix K-Drama themed pop-up featuring Queen of Tears and Lovely Runner merchandise and photo zones. Free entry.',links:[{l:'Netflix SG',u:'https://www.netflix.com/sg'},{l:'VivoCity',u:'https://www.vivocity.com.sg'}]},{g:'local',title:'Little Nyonya 2 — preview screening',type:'Screening',date:'Jun 20',venue:'Shaw Theatres Lido',status:'Upcoming',hot:72,vol:'3.1k',spark:'rise',desc:'MediaCorp preview screening before broadcast premiere — invites via Mediacorp Club and public ballot.',links:[{l:'Mediacorp',u:'https://www.mediacorp.sg'}]},{g:'cdrama',title:'WeTV C-Drama night SG',type:'Screening',date:'Jun 25',venue:'Cathay Cineplexes',status:'Upcoming',hot:68,vol:'2.9k',spark:'stable',desc:'WeTV Singapore screening celebrating The Story of Rose finale — subtitled screening followed by cast video Q&A.',links:[{l:'WeTV',u:'https://wetv.vip/en'}]},{g:'thai',title:'GMMTV Thai drama fan party',type:'Fan Party',date:'Jul 5',venue:'The Coliseum, Hard Rock Hotel',status:'Upcoming',hot:61,vol:'2.4k',spark:'rise',desc:'GMMTV fan gathering in Singapore — cast video appearances, merchandise pop-up and community screening.',links:[{l:'GMMTV',u:'https://www.youtube.com/@GMMTV'}]},{g:'kdrama',title:'Lovely Runner OST concert — SG',type:'Concert',date:'Jul 19',venue:'Esplanade Concert Hall',status:'Upcoming',hot:58,vol:'1.9k',spark:'rise',desc:"Lovely Runner OST concert at the Esplanade Concert Hall — live performances of the drama's iconic soundtrack.",links:[{l:'SISTIC',u:'https://www.sistic.com.sg'}]},{g:'others',title:'Turkish drama appreciation night',type:'Community',date:'Jun 28',venue:'Geylang Community Club',status:'Upcoming',hot:44,vol:'1.4k',spark:'stable',desc:'Community-organised Turkish drama night for SG Malay drama fans — screening, trivia and food. Free entry.',links:[{l:'PA Events',u:'https://www.pa.gov.sg'}]},{g:'local',title:'Channel 8 Drama Awards 2026',type:'Awards',date:'Aug 10',venue:'Mediacorp Campus',status:'Upcoming',hot:39,vol:'1.1k',spark:'stable',desc:'Annual Channel 8 Drama Awards — public voting open now for favourite shows and actors.',links:[{l:'Mediacorp',u:'https://www.mediacorp.sg'}]}],kdrama:[{g:'kdrama',title:'Queen of Tears fan meet — SG',type:'Fan Meet',date:'Jun 14–15',venue:'The Star Theatre',status:'Upcoming',hot:94,vol:'6.8k',spark:'surge',desc:'Kim Soo-hyun and Kim Ji-won confirmed for Singapore fan meet. Limited tickets via SISTIC.',links:[{l:'SISTIC',u:'https://www.sistic.com.sg'}]},{g:'kdrama',title:'Netflix K-Drama pop-up — VivoCity',type:'Pop-Up',date:'Jun 8–30',venue:'VivoCity L1',status:'Ongoing',hot:81,vol:'4.2k',spark:'rise',desc:'Netflix K-Drama pop-up featuring Queen of Tears and Lovely Runner merchandise. Free entry.',links:[{l:'VivoCity',u:'https://www.vivocity.com.sg'}]},{g:'kdrama',title:'Lovely Runner OST concert — SG',type:'Concert',date:'Jul 19',venue:'Esplanade Concert Hall',status:'Upcoming',hot:58,vol:'1.9k',spark:'rise',desc:'Lovely Runner OST concert at the Esplanade Concert Hall.',links:[{l:'SISTIC',u:'https://www.sistic.com.sg'}]},{g:'kdrama',title:'Marry My Husband pop-up café',type:'Pop-Up Café',date:'Jun 1–Jul 31',venue:'Koffee Bar, Tanjong Pagar',status:'Ongoing',hot:52,vol:'1.6k',spark:'stable',desc:'Drama-inspired menu items, photo zones and limited edition merchandise for SG fans.',links:[{l:'Instagram',u:'https://www.instagram.com'}]},{g:'kdrama',title:'Doctor Slump fan screening',type:'Screening',date:'Jun 22',venue:'The Projector',status:'Upcoming',hot:41,vol:'1.1k',spark:'stable',desc:'Binge-screening at The Projector — all episodes screened with fan discussion after.',links:[{l:'The Projector',u:'https://theprojector.sg'}]},{g:'kdrama',title:'My Love from the Star rewatch',type:'Screening',date:'Jul 8',venue:'GV Plaza Singapura',status:'Upcoming',hot:28,vol:'0.8k',spark:'stable',desc:'Nostalgic rewatch screening for SG fans — special fan pack included.',links:[{l:'Golden Village',u:'https://www.gv.com.sg'}]},{g:'kdrama',title:'K-Drama OST live — medley night',type:'Concert',date:'Aug 2',venue:'Singapore Indoor Stadium',status:'Upcoming',hot:22,vol:'0.6k',spark:'stable',desc:'Live concert featuring beloved OSTs from multiple K-dramas — full orchestra arrangement.',links:[{l:'SISTIC',u:'https://www.sistic.com.sg'}]},{g:'kdrama',title:'Netflix K-Drama awards watch party',type:'Watch Party',date:'Aug 20',venue:'Zouk Singapore',status:'Upcoming',hot:17,vol:'0.4k',spark:'stable',desc:'Live watch party for the K-Drama awards ceremony hosted by Netflix SG.',links:[{l:'Netflix SG',u:'https://www.netflix.com/sg'}]}],cdrama:[{g:'cdrama',title:'WeTV C-Drama night SG',type:'Screening',date:'Jun 25',venue:'Cathay Cineplexes',status:'Upcoming',hot:68,vol:'2.9k',spark:'stable',desc:'WeTV Singapore screening celebrating The Story of Rose finale.',links:[{l:'WeTV',u:'https://wetv.vip/en'}]},{g:'cdrama',title:'iQIYI C-Drama showcase',type:'Exhibition',date:'Jul 4–14',venue:'Bugis+',status:'Upcoming',hot:54,vol:'2.1k',spark:'rise',desc:'iQIYI C-Drama showcase featuring iconic props and costumes. Free with iQIYI app download.',links:[{l:'iQIYI',u:'https://www.iqiyi.com/intl/sg'}]},{g:'cdrama',title:'Blossoms Shanghai photo exhibition',type:'Exhibition',date:'Jun 15–30',venue:'National Museum of Singapore',status:'Ongoing',hot:41,vol:'1.4k',spark:'stable',desc:"Behind-the-scenes photo exhibition — rare production stills from Wong Kar-wai's team.",links:[{l:'National Museum',u:'https://www.nationalmuseum.sg'}]},{g:'cdrama',title:'The Double community rewatch',type:'Screening',date:'Jul 10',venue:'The Projector',status:'Upcoming',hot:33,vol:'1.0k',spark:'stable',desc:'Community rewatch of The Double — drama fans gathering to relive the revenge plot.',links:[{l:'The Projector',u:'https://theprojector.sg'}]},{g:'cdrama',title:'Xianxia drama merch pop-up',type:'Pop-Up',date:'Jul 20–21',venue:'Suntec Convention',status:'Upcoming',hot:24,vol:'0.7k',spark:'stable',desc:'Pop-up marketplace for xianxia drama merchandise — figures, prints and accessories.',links:[{l:'Suntec Singapore',u:'https://www.suntecsingapore.com'}]},{g:'cdrama',title:'WeTV Singapore anniversary event',type:'Fan Event',date:'Aug 5',venue:'Resorts World Sentosa',status:'Upcoming',hot:18,vol:'0.5k',spark:'stable',desc:'WeTV Singapore anniversary fan celebration — screening highlights and exclusive merchandise.',links:[{l:'WeTV',u:'https://wetv.vip/en'}]},{g:'cdrama',title:'C-Drama OST night — live',type:'Concert',date:'Aug 15',venue:'Esplanade Concert Hall',status:'Upcoming',hot:12,vol:'0.3k',spark:'stable',desc:'Live performance of beloved C-drama OSTs — Chinese orchestra arrangement.',links:[{l:'Esplanade',u:'https://www.esplanade.com'}]},{g:'cdrama',title:'Go Ahead fan community meet',type:'Community',date:'Aug 22',venue:'Geylang CC',status:'Upcoming',hot:8,vol:'0.2k',spark:'stable',desc:'Fan community meet for Go Ahead lovers — rewatch clips, fan discussion and potluck.',links:[{l:'PA Events',u:'https://www.pa.gov.sg'}]}],local:[{g:'local',title:'Little Nyonya 2 — preview screening',type:'Screening',date:'Jun 20',venue:'Shaw Theatres Lido',status:'Upcoming',hot:72,vol:'3.1k',spark:'rise',desc:'MediaCorp preview screening before broadcast premiere — invites via Mediacorp Club and public ballot.',links:[{l:'Mediacorp',u:'https://www.mediacorp.sg'}]},{g:'local',title:'Channel 8 Drama Awards 2026',type:'Awards',date:'Aug 10',venue:'Mediacorp Campus',status:'Upcoming',hot:39,vol:'1.1k',spark:'stable',desc:'Annual Channel 8 Drama Awards — public voting open now.',links:[{l:'Mediacorp',u:'https://www.mediacorp.sg'}]},{g:'local',title:'Code of Law 5 — legal forum',type:'Forum',date:'Jun 18',venue:'SMU',status:'Upcoming',hot:31,vol:'0.9k',spark:'stable',desc:'Panel discussion with legal professionals and scriptwriters on cybercrime laws. Open to public.',links:[{l:'SMU',u:'https://www.smu.edu.sg'}]},{g:'local',title:'Masters of the Sea exhibition',type:'Exhibition',date:'Jul 1–31',venue:'Asian Civilisations Museum',status:'Upcoming',hot:24,vol:'0.7k',spark:'stable',desc:'Companion exhibition on Hokkien maritime trade history in colonial Singapore.',links:[{l:'ACM',u:'https://www.acm.org.sg'}]},{g:'local',title:'Peranakan heritage trail — Katong',type:'Heritage Walk',date:'Every weekend',venue:'Katong / Joo Chiat',status:'Ongoing',hot:18,vol:'0.5k',spark:'stable',desc:'Guided Peranakan heritage trail through Katong tied to Little Nyonya 2.',links:[{l:'STB',u:'https://www.visitsingapore.com'}]},{g:'local',title:'Local drama writers workshop',type:'Workshop',date:'Jul 12',venue:'Lasalle College of the Arts',status:'Upcoming',hot:12,vol:'0.3k',spark:'stable',desc:'MediaCorp-hosted scriptwriting workshop for aspiring SG drama writers.',links:[{l:'Lasalle',u:'https://www.lasalle.edu.sg'}]},{g:'local',title:'SG Drama Fan Convention',type:'Convention',date:'Aug 24',venue:'Singapore Expo',status:'Upcoming',hot:8,vol:'0.2k',spark:'stable',desc:'First-ever SG Drama Fan Convention — merchandise, panels and actor appearances.',links:[{l:'Singapore Expo',u:'https://www.singaporeexpo.com.sg'}]},{g:'local',title:'Channel 5 drama premiere night',type:'Premiere',date:'Sep 1',venue:'GV VivoCity',status:'Upcoming',hot:5,vol:'0.1k',spark:'stable',desc:'Channel 5 drama premiere night for the new Tanglin season.',links:[{l:'Mediacorp',u:'https://www.mediacorp.sg'}]}],thai:[{g:'thai',title:'GMMTV Thai drama fan party',type:'Fan Party',date:'Jul 5',venue:'The Coliseum, Hard Rock Hotel',status:'Upcoming',hot:61,vol:'2.4k',spark:'rise',desc:'GMMTV fan gathering in Singapore — cast video appearances, merchandise pop-up and community screening.',links:[{l:'GMMTV',u:'https://www.youtube.com/@GMMTV'}]},{g:'thai',title:'Thai BL drama meet-up SG',type:'Community',date:'Jun 29',venue:'Bugis Village',status:'Upcoming',hot:44,vol:'1.6k',spark:'rise',desc:'Community meet for SG fans of Thai BL dramas — fan discussion, merch swap, group photos.',links:[{l:'Meetup.com',u:'https://www.meetup.com'}]},{g:'thai',title:'Only Friends finale rewatch',type:'Screening',date:'Jun 22',venue:'The Projector',status:'Upcoming',hot:31,vol:'1.0k',spark:'stable',desc:'Finale rewatch of Only Friends — community event with fan discussion after.',links:[{l:'The Projector',u:'https://theprojector.sg'}]},{g:'thai',title:'WeTV Thai drama weekend',type:'Pop-Up',date:'Jul 18–19',venue:'ION Orchard L4',status:'Upcoming',hot:22,vol:'0.7k',spark:'stable',desc:'WeTV Thailand drama weekend pop-up — merchandise, photo zones and streaming promotions.',links:[{l:'WeTV',u:'https://wetv.vip/en'}]},{g:'thai',title:'2gether rewatch — community screen',type:'Screening',date:'Aug 3',venue:'Alliance Française',status:'Upcoming',hot:9,vol:'0.3k',spark:'stable',desc:'Community rewatch of the BL classic with fan sharing session.',links:[{l:'Alliance Française',u:'https://www.alliancefrancaise.org.sg'}]},{g:'thai',title:'GMMTV fan art exhibition SG',type:'Exhibition',date:'Aug 14–17',venue:'Nee Soon CC',status:'Upcoming',hot:6,vol:'0.2k',spark:'stable',desc:'Fan art exhibition celebrating GMMTV Thai dramas.',links:[{l:'PA Events',u:'https://www.pa.gov.sg'}]},{g:'thai',title:'Thai drama OST cover night',type:'Concert',date:'Sep 6',venue:'Esplanade Outdoor Theatre',status:'Upcoming',hot:4,vol:'0.1k',spark:'stable',desc:'Local musicians covering beloved Thai drama OSTs — free outdoor event.',links:[{l:'Esplanade',u:'https://www.esplanade.com'}]},{g:'thai',title:'Thai Songkran drama café',type:'Pop-Up Café',date:'Apr 13–20',venue:'Haji Lane',status:'Upcoming',hot:3,vol:'0.1k',spark:'stable',desc:'Annual Songkran-themed Thai drama café pop-up on Haji Lane.',links:[{l:'Instagram',u:'https://www.instagram.com'}]}],others:[{g:'others',title:'Turkish drama appreciation night',type:'Community',date:'Jun 28',venue:'Geylang Community Club',status:'Upcoming',hot:44,vol:'1.4k',spark:'stable',desc:'Community-organised Turkish drama night for SG Malay drama fans — screening, trivia and food. Free entry.',links:[{l:'PA Events',u:'https://www.pa.gov.sg'}]},{g:'others',title:'J-Drama nostalgia night SG',type:'Community',date:'Jul 12',venue:'Tampines Hub',status:'Upcoming',hot:31,vol:'1.0k',spark:'stable',desc:'Nostalgia screening event for Japanese drama classics for SG Gen X fans.',links:[{l:'PA Events',u:'https://www.pa.gov.sg'}]},{g:'others',title:'Indian drama community screening',type:'Screening',date:'Jul 19',venue:'Little India CC',status:'Upcoming',hot:24,vol:'0.7k',spark:'rise',desc:'Community screening of Scam 1992 — ZEE5 promotions and fan discussion.',links:[{l:'ZEE5',u:'https://www.zee5.com'}]},{g:'others',title:'Turkish drama bazaar',type:'Pop-Up',date:'Aug 2',venue:'Geylang Serai Market',status:'Upcoming',hot:17,vol:'0.5k',spark:'stable',desc:'Turkish drama-themed bazaar — food, merchandise and cultural items.',links:[{l:'PA Events',u:'https://www.pa.gov.sg'}]},{g:'others',title:'World drama film fest SG',type:'Film Festival',date:'Aug 10–17',venue:'The Projector',status:'Upcoming',hot:12,vol:'0.3k',spark:'stable',desc:'International drama film festival at The Projector.',links:[{l:'The Projector',u:'https://theprojector.sg'}]},{g:'others',title:'Viu drama pop-up — SG',type:'Pop-Up',date:'Aug 22–24',venue:'Jurong Point',status:'Upcoming',hot:8,vol:'0.2k',spark:'stable',desc:'Viu platform pop-up showcasing Asian drama content.',links:[{l:'Viu',u:'https://www.viu.com/sg'}]},{g:'others',title:'ZEE5 Indian drama night',type:'Fan Event',date:'Sep 3',venue:'Little India Arcade',status:'Upcoming',hot:5,vol:'0.1k',spark:'stable',desc:'ZEE5 fan night for SG Indian drama community.',links:[{l:'ZEE5',u:'https://www.zee5.com'}]},{g:'others',title:'Global drama fan fair',type:'Convention',date:'Sep 20',venue:'Singapore Expo Hall 4',status:'Upcoming',hot:3,vol:'0.1k',spark:'stable',desc:'Multi-genre drama fan fair — K, C, J, Turkish and Indian dramas.',links:[{l:'Singapore Expo',u:'https://www.singaporeexpo.com.sg'}]}]};
-const EV_KPI={today:{searches:'14.2k',searchesSub:'+41% vs yesterday',top1:'K-Drama events',top1sub:'Most searched event genre today',top2:'Queen of Tears fan meet',top2sub:'Jun 14–15 · The Star Theatre'},'7d':{searches:'98k',searchesSub:'+33% vs prev 7 days',top1:'K-Drama events',top1sub:'50% of drama event searches',top2:'Netflix K-Drama pop-up',top2sub:'VivoCity · Ongoing now'},'30d':{searches:'380k',searchesSub:'+28% vs prev 30 days',top1:'K-Drama events',top1sub:'Dominates drama event searches',top2:'WeTV C-Drama night',top2sub:'Growing C-Drama event interest'},'3m':{searches:'1.1M',searchesSub:'+52% vs prev quarter',top1:'K-Drama events',top1sub:'Consistently most searched',top2:'GMMTV fan party',top2sub:'Thai drama events growing fastest'}};
-const EV_RANKS={today:{kdrama:{pct:52,badge:'Viral',bs:'background:#FCEBEB;color:#791F1F;'},cdrama:{pct:18,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},local:{pct:14,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:9,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:2,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:5,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'}},'7d':{kdrama:{pct:50,badge:'Viral',bs:'background:#FCEBEB;color:#791F1F;'},cdrama:{pct:19,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},local:{pct:14,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:10,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:2,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:5,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'}},'30d':{kdrama:{pct:46,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},cdrama:{pct:21,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},local:{pct:16,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:11,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:2,badge:'Fading',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:4,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}},'3m':{kdrama:{pct:44,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:22,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},local:{pct:17,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:12,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:2,badge:'Fading',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:3,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'}}};
-const EV_INSIGHTS={all:{today:['Queen of Tears fan meet — ticket search spike of 6.8k today','Netflix K-Drama pop-up at VivoCity drawing crowds — free entry','Turkish drama community events growing in heartland CCs'],'7d':['K-Drama events at 52% of drama event searches this week','Thai BL community meet-ups growing week on week','Local drama events gaining traction — Little Nyonya 2 effect'],'30d':['Fan meets and pop-ups most searched drama event format','C-Drama events growing — WeTV investing in SG activations','Community-organised Others events seeing more sign-ups'],'3m':['Drama events grew 52% in search volume vs last year','K-Drama events consistently top but Others closing the gap','First-ever SG Drama Fan Convention announced']},kdrama:{today:['Queen of Tears fan meet — 6.8k ticket searches today alone','Netflix pop-up at VivoCity — directions and hours searched heavily','Marry My Husband pop-up café still active at Tanjong Pagar'],'7d':['Queen of Tears fan meet dominated K-Drama event searches all week','Netflix pop-up consistently searched for opening hours','Lovely Runner OST concert advance interest building'],'30d':['K-Drama fan meets most searched drama event format this month','Esplanade OST concerts gaining strong reputation among K-Drama fans','K-Drama events grew 60% in search volume this quarter'],'3m':['K-Drama events grew 60% in search volume this quarter','Fan meets with actual cast delivering the highest buzz scores','Netflix SG most active K-Drama event organiser in Singapore']},cdrama:{today:['WeTV C-Drama night — ticket searches active ahead of Jun 25','iQIYI showcase pre-registration trending in SG','Blossoms Shanghai exhibition still drawing visitors'],'7d':['WeTV driving most C-Drama event searches this week','iQIYI showcase gaining interest beyond existing C-Drama fans','Xianxia merch pop-up gaining early traction'],'30d':['C-Drama events growing fastest among all genre event categories','WeTV most active C-Drama event organiser in SG','Blossoms Shanghai exhibition extended by popular demand'],'3m':['C-Drama events grew from minimal to meaningful presence','WeTV investing significantly in SG fan activations','iQIYI entering the SG events space']},local:{today:['Little Nyonya 2 preview screening ballot — searches spiking','Code of Law 5 legal forum at SMU generating strong buzz','Peranakan heritage trail bookings growing'],'7d':['Local drama events best search week in months','Little Nyonya 2 preview screening most searched local event','Channel 8 Awards voting driving sustained engagement'],'30d':['Local drama events growing — MediaCorp investing more in fan engagement','Little Nyonya 2 anchoring the local events calendar','Heritage events performing well for local drama'],'3m':['Local drama events grew 38% in search volume','First-ever SG Drama Fan Convention announced','Local drama events increasingly tied to cultural heritage']},thai:{today:['GMMTV fan party ticket searches active — Hard Rock Hotel exciting fans','Thai BL meet-up at Bugis Village filling up fast','Only Friends rewatch community buzz building'],'7d':['GMMTV fan party most searched Thai drama event this week','Thai BL community meet-ups growing consistently','WeTV Thai drama weekend at ION generating advance interest'],'30d':['Thai drama events growing in frequency and search volume','GMMTV most active Thai drama event driver in SG','BL fan community driving Thai drama event searches'],'3m':['Thai drama events grew fastest among all genre event categories','GMMTV fan gatherings becoming a regular SG calendar event','BL drama events gaining mainstream visibility']},others:{today:['Turkish drama night — community coordinating via WhatsApp','J-Drama nostalgia night at Tampines Hub generating heartland interest','Scam 1992 Indian community screening filling up fast'],'7d':['Turkish drama community events most active Others sub-category','J-Drama nostalgia events gaining traction among SG Gen X','Indian drama screenings growing — ZEE5 supporting'],'30d':['Others drama events grew significantly — community-driven','Turkish drama events most frequent in Others category','J-Drama events growing as younger SG viewers discover classics'],'3m':['Others drama events grew from scattered to organised series','Turkish drama community most organised Others fan base','Indian drama events growing with ZEE5 platform support']}};
+const D_KPI = {
+  today: { searches:'–', searchesSub:'Loading…', top1:'–', top1sub:'', top2:'–', top2sub:'' },
+  '7d':  { searches:'–', searchesSub:'Loading…', top1:'–', top1sub:'', top2:'–', top2sub:'' },
+  '30d': { searches:'–', searchesSub:'Loading…', top1:'–', top1sub:'', top2:'–', top2sub:'' },
+  '3m':  { searches:'–', searchesSub:'Loading…', top1:'–', top1sub:'', top2:'–', top2sub:'' },
+};
 
-const ARTISTS={all:[{g:'kdrama',name:'Kim Soo-hyun',role:'Actor',show:'Queen of Tears',score:96,vol:'8.1k',trend:'↑',spark:'surge'},{g:'kdrama',name:'Kim Ji-won',role:'Actress',show:'Queen of Tears',score:91,vol:'6.4k',trend:'↑',spark:'surge'},{g:'cdrama',name:'Liu Yifei',role:'Actress',show:'The Story of Rose',score:83,vol:'4.9k',trend:'↑',spark:'rise'},{g:'kdrama',name:'Byeon Woo-seok',role:'Actor',show:'Lovely Runner',score:79,vol:'4.2k',trend:'↑',spark:'newentry'},{g:'local',name:'Zoe Tay',role:'Actress',show:'Little Nyonya 2',score:74,vol:'3.6k',trend:'↑',spark:'rise'},{g:'thai',name:'Joss Wachirawit',role:'Actor',show:'Only Friends',score:68,vol:'2.9k',trend:'→',spark:'stable'},{g:'western',name:'Nicola Coughlan',role:'Actress',show:'Bridgerton S3',score:55,vol:'2.1k',trend:'→',spark:'stable'},{g:'others',name:'Engin Altan Düzyatan',role:'Actor',show:'Dirilis: Ertugrul',score:49,vol:'1.7k',trend:'→',spark:'stable'}],kdrama:[{g:'kdrama',name:'Kim Soo-hyun',role:'Actor',show:'Queen of Tears',score:96,vol:'8.1k',trend:'↑',spark:'surge'},{g:'kdrama',name:'Kim Ji-won',role:'Actress',show:'Queen of Tears',score:91,vol:'6.4k',trend:'↑',spark:'surge'},{g:'kdrama',name:'Byeon Woo-seok',role:'Actor',show:'Lovely Runner',score:79,vol:'4.2k',trend:'↑',spark:'newentry'},{g:'kdrama',name:'Park Min-young',role:'Actress',show:'Marry My Husband',score:71,vol:'3.4k',trend:'→',spark:'fall'},{g:'kdrama',name:'Song Hye-kyo',role:'Actress',show:'The Glory',score:63,vol:'2.8k',trend:'↓',spark:'fall'},{g:'kdrama',name:'Park Seo-joon',role:'Actor',show:'Various',score:55,vol:'2.2k',trend:'→',spark:'stable'},{g:'kdrama',name:'Son Ye-jin',role:'Actress',show:'Crash Landing on You',score:44,vol:'1.8k',trend:'→',spark:'stable'},{g:'kdrama',name:'Lee Min-ho',role:'Actor',show:'Various',score:38,vol:'1.4k',trend:'↓',spark:'fall'}],cdrama:[{g:'cdrama',name:'Liu Yifei',role:'Actress',show:'The Story of Rose',score:83,vol:'4.9k',trend:'↑',spark:'rise'},{g:'cdrama',name:'Hu Ge',role:'Actor',show:'Nirvana in Fire',score:72,vol:'3.8k',trend:'→',spark:'classic'},{g:'cdrama',name:'Yang Mi',role:'Actress',show:'Various',score:64,vol:'3.1k',trend:'↑',spark:'rise'},{g:'cdrama',name:'Xiao Zhan',role:'Actor',show:'Various',score:58,vol:'2.6k',trend:'→',spark:'stable'},{g:'cdrama',name:'Wang Yibo',role:'Actor',show:'The Untamed',score:52,vol:'2.2k',trend:'→',spark:'stable'},{g:'cdrama',name:'Tang Wei',role:'Actress',show:'Blossoms Shanghai',score:44,vol:'1.8k',trend:'↑',spark:'rise'},{g:'cdrama',name:'Zhao Liying',role:'Actress',show:'Various',score:36,vol:'1.4k',trend:'→',spark:'stable'},{g:'cdrama',name:'Chen Xiao',role:'Actor',show:'The Double',score:28,vol:'1.0k',trend:'↑',spark:'newentry'}],local:[{g:'local',name:'Zoe Tay',role:'Actress',show:'Little Nyonya 2',score:74,vol:'3.6k',trend:'↑',spark:'rise'},{g:'local',name:'Tay Ping Hui',role:'Actor',show:'Code of Law 5',score:61,vol:'2.8k',trend:'↑',spark:'rise'},{g:'local',name:'Felicia Chin',role:'Actress',show:'Various',score:52,vol:'2.2k',trend:'→',spark:'stable'},{g:'local',name:'Desmond Tan',role:'Actor',show:'Various',score:44,vol:'1.8k',trend:'→',spark:'stable'},{g:'local',name:'Rebecca Lim',role:'Actress',show:'Various',score:38,vol:'1.5k',trend:'↑',spark:'rise'},{g:'local',name:'Pierre Png',role:'Actor',show:'Various',score:31,vol:'1.2k',trend:'→',spark:'stable'},{g:'local',name:'Joanne Peh',role:'Actress',show:'Various',score:24,vol:'0.9k',trend:'→',spark:'stable'},{g:'local',name:'Romeo Tan',role:'Actor',show:'Various',score:17,vol:'0.6k',trend:'↑',spark:'rise'}],thai:[{g:'thai',name:'Joss Wachirawit',role:'Actor',show:'Only Friends',score:68,vol:'2.9k',trend:'→',spark:'stable'},{g:'thai',name:'Bright Vachirawit',role:'Actor',show:'2gether The Series',score:61,vol:'2.5k',trend:'→',spark:'stable'},{g:'thai',name:'Win Metawin',role:'Actor',show:'2gether The Series',score:57,vol:'2.2k',trend:'→',spark:'stable'},{g:'thai',name:'New Thitipoom',role:'Actor',show:'Hidden Agenda',score:49,vol:'1.8k',trend:'↑',spark:'newentry'},{g:'thai',name:'Baifern Pimchanok',role:'Actress',show:'Enchanted',score:41,vol:'1.5k',trend:'↑',spark:'rise'},{g:'thai',name:'Mew Suppasit',role:'Actor',show:'Various',score:33,vol:'1.2k',trend:'→',spark:'stable'},{g:'thai',name:'Gulf Kanawut',role:'Actor',show:'Various',score:27,vol:'0.9k',trend:'→',spark:'stable'},{g:'thai',name:'Krist Perawat',role:'Actor',show:'Various',score:19,vol:'0.6k',trend:'↓',spark:'fall'}],western:[{g:'western',name:'Nicola Coughlan',role:'Actress',show:'Bridgerton S3',score:55,vol:'2.1k',trend:'→',spark:'stable'},{g:'western',name:'Jonathan Bailey',role:'Actor',show:'Bridgerton S2',score:47,vol:'1.8k',trend:'↓',spark:'fall'},{g:'western',name:'Lily James',role:'Actress',show:'Various',score:39,vol:'1.5k',trend:'→',spark:'stable'},{g:'western',name:'Caitriona Balfe',role:'Actress',show:'Outlander S7',score:31,vol:'1.1k',trend:'→',spark:'stable'},{g:'western',name:'Sam Heughan',role:'Actor',show:'Outlander S7',score:27,vol:'0.9k',trend:'→',spark:'stable'},{g:'western',name:'Phoebe Dynevor',role:'Actress',show:'Bridgerton S1',score:19,vol:'0.7k',trend:'↓',spark:'fall'},{g:'western',name:'Hugh Bonneville',role:'Actor',show:'Downton Abbey',score:13,vol:'0.5k',trend:'→',spark:'classic'},{g:'western',name:'Gabriel Macht',role:'Actor',show:'Suits S10',score:9,vol:'0.3k',trend:'↑',spark:'rise'}],others:[{g:'others',name:'Engin Altan Düzyatan',role:'Actor',show:'Dirilis: Ertugrul',score:49,vol:'1.7k',trend:'→',spark:'stable'},{g:'others',name:'Burak Özçivit',role:'Actor',show:'Kurulus Osman',score:41,vol:'1.4k',trend:'→',spark:'stable'},{g:'others',name:'Takuya Kimura',role:'Actor',show:'Various J-Dramas',score:33,vol:'1.1k',trend:'→',spark:'classic'},{g:'others',name:'Pratik Gandhi',role:'Actor',show:'Scam 1992',score:27,vol:'0.8k',trend:'↑',spark:'rise'},{g:'others',name:'Takashi Sorimachi',role:'Actor',show:'GTO',score:21,vol:'0.6k',trend:'→',spark:'classic'},{g:'others',name:'Mao Inoue',role:'Actress',show:'Hana Yori Dango',score:16,vol:'0.5k',trend:'↑',spark:'newentry'},{g:'others',name:'Sourabh Raaj Jain',role:'Actor',show:'Mahabharat',score:10,vol:'0.3k',trend:'→',spark:'stable'},{g:'others',name:'Can Yaman',role:'Actor',show:'Various Turkish',score:7,vol:'0.2k',trend:'↑',spark:'rise'}]};
-const AR_KPI={today:{searches:'22.4k',searchesSub:'+38% vs yesterday',top1:'K-Drama artists',top1sub:'58% of all drama artist searches',top2:'Kim Soo-hyun',top2sub:'Score 96 · 8.1k searches today'},'7d':{searches:'157k',searchesSub:'+29% vs prev 7 days',top1:'K-Drama artists',top1sub:'56% share this week',top2:'Byeon Woo-seok',top2sub:'Fastest rising artist this week'},'30d':{searches:'609k',searchesSub:'+22% vs prev 30 days',top1:'K-Drama artists',top1sub:'54% share this month',top2:'Liu Yifei',top2sub:'Biggest C-Drama artist mover'},'3m':{searches:'1.8M',searchesSub:'+44% vs prev quarter',top1:'K-Drama artists',top1sub:'52% · Consistently dominant',top2:'Zoe Tay',top2sub:'Highest SG local artist score'}};
-const AR_RANKS={today:{kdrama:{pct:58,badge:'Viral',bs:'background:#FCEBEB;color:#791F1F;'},cdrama:{pct:18,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},local:{pct:10,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:8,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:4,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:2,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'}},'7d':{kdrama:{pct:56,badge:'Viral',bs:'background:#FCEBEB;color:#791F1F;'},cdrama:{pct:19,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},local:{pct:10,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:9,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:4,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:2,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}},'30d':{kdrama:{pct:54,badge:'Hot',bs:'background:#FAECE7;color:#993C1D;'},cdrama:{pct:20,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},local:{pct:12,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:9,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:3,badge:'Fading',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:2,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}},'3m':{kdrama:{pct:52,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:21,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},local:{pct:13,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},thai:{pct:10,badge:'Rising',bs:'background:#FAEEDA;color:#633806;'},western:{pct:2,badge:'Fading',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:2,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}};
-const AR_INSIGHTS={all:{today:['Kim Soo-hyun score 96 — Queen of Tears finale driving #1 SG drama artist search','Byeon Woo-seok surging fast from Lovely Runner — SG fans hunting his earlier work','Zoe Tay boosted by Little Nyonya 2 preview — local artists having a strong week'],'7d':['K-Drama artists dominant at 58% of all artist searches this week','Liu Yifei biggest C-Drama artist mover — The Story of Rose sustained effect','New Thitipoom quietly rising — Hidden Agenda word-of-mouth building'],'30d':['K-Drama artists held 54–58% of all artist searches throughout the month','C-Drama artists grew 4% share as The Story of Rose sustained momentum','Local artists growing — Little Nyonya 2 anticipation building through May'],'3m':['K-Drama artists sustained 50%+ of all drama artist searches all quarter','C-Drama artists fastest growing genre category — up 8% share since March','Thai drama artist searches grew steadily — GMMTV content consistency']},kdrama:{today:['Kim Soo-hyun score 96 — highest single-day score this tracker has recorded','Kim Ji-won score 91 — SG fans calling her Queen of Tears performance career-best','Byeon Woo-seok score 79 — Lovely Runner new episode driving an overnight surge'],'7d':['Kim Soo-hyun #1 all 7 days — Queen of Tears finale sustained the buzz','Byeon Woo-seok fastest rising K-Drama artist this week','Park Min-young steady — Marry My Husband post-finale searches holding'],'30d':['Queen of Tears pair held top 2 spots all month','Byeon Woo-seok entered top 5 K-Drama artists from a new entry','Song Hye-kyo fading — no new project, The Glory discussion winding down'],'3m':['Kim Soo-hyun biggest sustained artist this entire quarter','Byeon Woo-seok biggest new entry of the quarter across all genres','Lee Min-ho declining — between dramas, no comeback announcement yet']},cdrama:{today:['Liu Yifei fashion content from The Story of Rose trending on SG Instagram','Hu Ge evergreen — Nirvana in Fire rewatch community active today','Tang Wei searches rising after a Blossoms Shanghai Reddit post went viral'],'7d':['Liu Yifei #1 C-Drama artist all week — The Story of Rose effect sustained','Yang Mi steady — multiple projects keeping SG fans engaged','Chen Xiao rising — The Double new episode providing a weekly lift'],'30d':['C-Drama artists grew as a share of total drama artist searches this month','Liu Yifei biggest single-artist mover in C-Drama this month','Xiao Zhan and Wang Yibo steady — loyal SG fan community active'],'3m':['C-Drama artists grew fastest of any genre artist category this quarter','The Untamed duo consistently in top 5 C-Drama artists all quarter','Liu Yifei biggest breakout C-Drama artist of the quarter']},local:{today:['Zoe Tay score 74 — Little Nyonya 2 preview announcement driving searches today','Tay Ping Hui steady — Code of Law 5 aired a new episode this week','Rebecca Lim searches rising — recent interview appearance driving discovery'],'7d':['Zoe Tay #1 local artist all week — Little Nyonya 2 excitement building','Tay Ping Hui consistent — Code of Law 5 holding strong ratings','Local artist searches best week in 2 months'],'30d':['Local artists grew from 10% → 12% of all artist searches this month','Zoe Tay biggest local artist this month — Little Nyonya 2 anticipation','All local actors seeing a slight lift — local drama content improving'],'3m':['Local artists quietly growing quarter on quarter','Little Nyonya 2 announcement was the biggest local artist search moment','MediaCorp veteran actors benefit most from each new local drama release']},thai:{today:['Joss Wachirawit stable — Only Friends community active on Reddit SG today','New Thitipoom rising fast — Hidden Agenda week 3 word-of-mouth spike','Baifern Pimchanok gaining — Enchanted discovery by new Thai drama viewers'],'7d':['GMMTV artists consistently searched all week by loyal SG BL fans','New Thitipoom biggest Thai artist mover this week','BrightWin duo still searched together 4 years after 2gether aired'],'30d':['Thai drama artists grew from 7% → 9% of artist searches this month','New Thitipoom and Baifern Pimchanok both gaining meaningful momentum','GMMTV veterans maintaining their loyal baseline consistently'],'3m':['Thai drama artists grew steadily from 7% → 10% this quarter','GMMTV content consistency keeping Thai artists in regular SG searches','New Thitipoom biggest Thai artist breakout of the quarter']},western:{today:['Nicola Coughlan steady — Bridgerton S3 Penelope-Colin arc still generating discussion',"Jonathan Bailey fading — SG fan attention has shifted to Penelope's arc",'Gabriel Macht rising slightly — Suits revival Netflix discovery effect'],'7d':['Western artists at 4% — between major drama releases','Bridgerton cast still holding but declining from peak','Outlander cast getting final season farewell attention from loyal SG fans'],'30d':['Western artists declining — 4% share down from 6% last month','No major new Western drama lead released','Suits S10 revival giving Gabriel Macht a small but sustained lift'],'3m':['Western artists fell from 7% → 3–4% this quarter','Bridgerton was the last major Western artist surge — back in March','SG Western drama audience slowly migrating to K-Drama and C-Drama']},others:{today:['Engin Altan Düzyatan steady — Malay community Turkish drama loyalty very strong','Pratik Gandhi rising — Scam 1992 word-of-mouth growing among SG Indian professionals','Mao Inoue discovered by younger SG viewers comparing Hana Yori Dango with Boys Over Flowers'],'7d':['Turkish drama actors dominate Others artist searches all week','Pratik Gandhi biggest Others artist mover this week','J-Drama actors gaining from nostalgia content wave on YouTube SG'],'30d':['Others artists held 2% share — small but extremely loyal niche communities','Turkish drama actors most consistent Others sub-category all month','Indian drama actors growing — Scam 1992 word-of-mouth sustained'],'3m':['Others artists held steady — loyal niche fanbases very consistent over time','Turkish drama actors most searched Others artists all quarter','Pratik Gandhi biggest Others artist breakthrough of the entire quarter']}};
+const D_CHART = {
+  today: { labels:['–','–','–','–'], kdrama:[0,0,0,0], cdrama:[0,0,0,0], local:[0,0,0,0] },
+  '7d':  { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], kdrama:[0,0,0,0,0,0,0], cdrama:[0,0,0,0,0,0,0], local:[0,0,0,0,0,0,0] },
+  '30d': { labels:['W1','W2','W3','W4'], kdrama:[0,0,0,0], cdrama:[0,0,0,0], local:[0,0,0,0] },
+  '3m':  { labels:['Mar','Apr','May'], kdrama:[0,0,0], cdrama:[0,0,0], local:[0,0,0] },
+};
 
-// ── STATE ─────────────────────────────────────────
+const SHOW_INSIGHTS = { all:{today:[],  '7d':[], '30d':[], '3m':[]}, kdrama:{today:[], '7d':[], '30d':[], '3m':[]}, cdrama:{today:[], '7d':[], '30d':[], '3m':[]}, local:{today:[], '7d':[], '30d':[], '3m':[]}, thai:{today:[], '7d':[], '30d':[], '3m':[]}, western:{today:[], '7d':[], '30d':[], '3m':[]}, others:{today:[], '7d':[], '30d':[], '3m':[]} };
+
+const EV_KPI    = { today:{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''}, '7d':{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''}, '30d':{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''}, '3m':{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''} };
+const EV_RANKS  = { today:{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}, '7d':{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}, '30d':{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}, '3m':{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}} };
+const EV_INSIGHTS = { all:{today:[],  '7d':[], '30d':[], '3m':[]}, kdrama:{today:[], '7d':[], '30d':[], '3m':[]}, cdrama:{today:[], '7d':[], '30d':[], '3m':[]}, local:{today:[], '7d':[], '30d':[], '3m':[]}, thai:{today:[], '7d':[], '30d':[], '3m':[]}, others:{today:[], '7d':[], '30d':[], '3m':[]} };
+
+const AR_KPI    = { today:{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''}, '7d':{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''}, '30d':{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''}, '3m':{searches:'–',searchesSub:'Loading…',top1:'–',top1sub:'',top2:'–',top2sub:''} };
+const AR_RANKS  = { today:{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}, '7d':{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}, '30d':{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}}, '3m':{kdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},cdrama:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},local:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},thai:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},western:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'},others:{pct:0,badge:'Stable',bs:'background:#EAF3DE;color:#27500A;'}} };
+const AR_INSIGHTS = { all:{today:[],  '7d':[], '30d':[], '3m':[]}, kdrama:{today:[], '7d':[], '30d':[], '3m':[]}, cdrama:{today:[], '7d':[], '30d':[], '3m':[]}, local:{today:[], '7d':[], '30d':[], '3m':[]}, thai:{today:[], '7d':[], '30d':[], '3m':[]}, western:{today:[], '7d':[], '30d':[], '3m':[]}, others:{today:[], '7d':[], '30d':[], '3m':[]} };
+
 let mainTab='shows', subTab={shows:'all',events:'all',artists:'all'}, period='today', chartInst=null;
 
 function setPeriod(p,btn){period=p;document.querySelectorAll('.ppill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');updateAll();}
@@ -613,206 +558,164 @@ function renderArtists(){
   requestAnimationFrame(drawAllSparks);
 }
 
-// ── LIVE DATA CONNECTION (auto-inserted) ──
+
 // ═══════════════════════════════════════════════════════════════════════════
-// SUPABASE LIVE DATA CONNECTION
-// Replace YOUR_ANON_KEY_HERE with your anon public key from Supabase
-// Settings → API → anon public
-//
-// Paste this entire block just before the closing </script> tag in index.html
-// It replaces all mock data with live data from Supabase on every page load
+// SUPABASE LIVE DATA — single source of truth
+// Replace YOUR_ANON_KEY_HERE with your anon public key from:
+// Supabase → Settings → API → anon public
 // ═══════════════════════════════════════════════════════════════════════════
 
-const SB_URL = 'https://elcwdfrndqpjxsdsvcso.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsY3dkZnJuZHFwanhzZHN2Y3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDAxODIsImV4cCI6MjA5NTg3NjE4Mn0.IEXDINz0VT8XkXMFucqKdR6A8XgInA25qvxda278FkM';
+const SB_URL     = 'https://elcwdfrndqpjxsdsvcso.supabase.co';
+const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsY3dkZnJuZHFwanhzZHN2Y3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDAxODIsImV4cCI6MjA5NTg3NjE4Mn0.IEXDINz0VT8XkXMFucqKdR6A8XgInA25qvxda278FkM';
+const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` };
 
-const SB_HEADERS = {
-  'apikey': SB_KEY,
-  'Authorization': `Bearer ${SB_KEY}`,
-  'Content-Type': 'application/json',
-};
-
-// ── FETCH FROM SUPABASE ───────────────────────────────────────────────────
-
-async function sbFetch(table, params = '') {
-  const res = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-    headers: SB_HEADERS,
-  });
-  if (!res.ok) throw new Error(`Supabase error: ${res.status} on ${table}`);
+async function sbFetch(table, params) {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, { headers: SB_HEADERS });
+  if (!res.ok) throw new Error(`${res.status} on ${table}`);
   return res.json();
 }
 
-// ── MAP SUPABASE ROWS → DRAMA format ─────────────────────────────────────
-
-function mapShows(rows) {
-  // Group by genre
-  const byGenre = { all: [], kdrama: [], cdrama: [], local: [], thai: [], western: [], others: [] };
-
-  rows.forEach(row => {
-    const show = {
-      g:      row.genre,
-      name:   row.name,
-      cn:     row.chinese_title || null,
-      isNew:  row.status === 'New ep',
-      plat:   row.platforms || [],
-      ctx:    row.context || '',
-      desc:   row.description || '',
-      spark:  row.sparkline_shape || 'stable',
-    };
-    byGenre.all.push(show);
-    if (byGenre[row.genre]) byGenre[row.genre].push(show);
-  });
-
-  return byGenre;
+function fmtVol(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
+  if (n >= 1000)    return (n/1000).toFixed(1)+'k';
+  return n > 0 ? String(n) : '–';
 }
 
-function mapScores(rows) {
-  // Returns arrays indexed by position in rows
-  const scores   = { today: [], '7d': [], '30d': [], '3m': [] };
-  const statuses = { today: [], '7d': [], '30d': [], '3m': [] };
-  const vols     = { today: [], '7d': [], '30d': [], '3m': [] };
-
-  rows.forEach(row => {
-    const s = Math.round(row.score || 0);
-    ['today','7d','30d','3m'].forEach(p => {
-      scores[p].push(s);
-      statuses[p].push(row.status || 'Stable');
-      vols[p].push(formatVol(row.search_volume || 0));
-    });
-  });
-
-  return { scores, statuses, vols };
-}
-
-function mapArtists(rows) {
-  const byGenre = { all: [], kdrama: [], cdrama: [], local: [], thai: [], western: [], others: [] };
-
-  rows.forEach(row => {
-    const artist = {
-      g:     row.genre,
-      name:  row.name,
-      role:  row.role || 'Actor',
-      show:  row.show || '',
-      score: Math.round(row.score || 0),
-      vol:   formatVol(row.search_volume || 0),
-      trend: row.trend || '→',
-      spark: row.sparkline_shape || 'stable',
-    };
-    byGenre.all.push(artist);
-    if (byGenre[row.genre]) byGenre[row.genre].push(artist);
-  });
-
-  return byGenre;
-}
-
-function mapEvents(rows) {
-  const byGenre = { all: [], kdrama: [], cdrama: [], local: [], thai: [], western: [], others: [] };
-
-  rows.forEach(row => {
-    const event = {
-      g:      row.genre,
-      title:  row.title,
-      type:   row.type || 'Event',
-      date:   row.event_date || '',
-      venue:  row.venue || '',
-      status: row.status || 'Upcoming',
-      hot:    Math.round(row.hot_score || 0),
-      vol:    row.search_vol || '0k',
-      spark:  row.sparkline_shape || 'stable',
-      desc:   row.description || '',
-      links:  row.links || [],
-    };
-    byGenre.all.push(event);
-    if (byGenre[row.genre]) byGenre[row.genre].push(event);
-  });
-
-  return byGenre;
-}
-
-function mapRanks(rows, field = 'score') {
-  // Build genre breakdown percentages from live scores
-  const totals = {};
+function buildDrama(rows) {
+  const out = { all:[], kdrama:[], cdrama:[], local:[], thai:[], western:[], others:[] };
   rows.forEach(r => {
-    totals[r.genre] = (totals[r.genre] || 0) + (r[field] || 0);
+    const s = { g:r.genre, name:r.name, cn:r.chinese_title||null, isNew:r.is_new||false, plat:r.platforms||[], ctx:r.context||'', desc:r.description||'', spark:r.sparkline_shape||'stable' };
+    out.all.push(s);
+    if (out[r.genre]) out[r.genre].push(s);
   });
-  const grand = Object.values(totals).reduce((a,b) => a+b, 0) || 1;
+  return out;
+}
 
-  const ranks = {};
-  const statusMap = { kdrama:'Viral', cdrama:'Hot', local:'Rising', thai:'Rising', western:'Stable', others:'Rising' };
-  const bsMap = {
-    Viral:  'background:#FCEBEB;color:#791F1F;',
-    Hot:    'background:#FAECE7;color:#993C1D;',
-    Rising: 'background:#FAEEDA;color:#633806;',
-    Stable: 'background:#EAF3DE;color:#27500A;',
-    Fading: 'background:#EAF3DE;color:#27500A;',
-  };
+function buildScores(rows) {
+  const sc=[], st=[], vo=[];
+  rows.forEach(r => { sc.push(Math.round(r.score||0)); st.push(r.status||'Stable'); vo.push(fmtVol(r.search_volume||0)); });
+  const wrap = arr => ({ today:[...arr], '7d':[...arr], '30d':[...arr], '3m':[...arr] });
+  return { scores:wrap(sc), statuses:wrap(st), vols:wrap(vo) };
+}
 
+function buildRanks(rows) {
+  const tot={};
+  rows.forEach(r => tot[r.genre]=(tot[r.genre]||0)+(r.score||r.hot_score||0));
+  const grand=Object.values(tot).reduce((a,b)=>a+b,0)||1;
+  const bsMap={ Viral:'background:#FCEBEB;color:#791F1F;', Hot:'background:#FAECE7;color:#993C1D;', Rising:'background:#FAEEDA;color:#633806;', Stable:'background:#EAF3DE;color:#27500A;', Fading:'background:#EAF3DE;color:#27500A;' };
+  const ranks={};
   ['kdrama','cdrama','local','thai','western','others'].forEach(g => {
-    const pct = Math.round(((totals[g] || 0) / grand) * 100);
-    const badge = statusMap[g] || 'Stable';
-    ranks[g] = { pct, badge, bs: bsMap[badge] };
+    const pct=Math.round(((tot[g]||0)/grand)*100);
+    const badge=pct>=15?'Viral':pct>=10?'Hot':pct>=6?'Rising':'Stable';
+    ranks[g]={ pct, badge, bs:bsMap[badge] };
   });
-
-  // Ensure percentages add up to 100
-  const total = Object.values(ranks).reduce((a,b) => a + b.pct, 0);
-  if (total !== 100) ranks.kdrama.pct += (100 - total);
-
-  return ranks;
+  const sum=Object.values(ranks).reduce((a,b)=>a+b.pct,0);
+  if(sum!==100) ranks.kdrama.pct+=(100-sum);
+  return { today:{...ranks}, '7d':{...ranks}, '30d':{...ranks}, '3m':{...ranks} };
 }
 
-function formatVol(n) {
-  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
-  if (n >= 1000)    return (n/1000).toFixed(1) + 'k';
-  return String(n);
+function buildKPI(rows, nameField='name') {
+  const sorted=[...rows].sort((a,b)=>(b.score||b.hot_score||0)-(a.score||a.hot_score||0));
+  const top=sorted[0]||{};
+  const tot={};
+  rows.forEach(r=>tot[r.genre]=(tot[r.genre]||0)+(r.score||r.hot_score||0));
+  const topG=Object.entries(tot).sort((a,b)=>b[1]-a[1])[0]?.[0]||'kdrama';
+  const kpi={ searches:fmtVol(rows.reduce((a,r)=>a+(r.search_volume||0),0))||'–', searchesSub:'Updated '+new Date().toLocaleString('en-SG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}), top1:DG[topG]?.label||'–', top1sub:`${Math.round(tot[topG]||0)} total score`, top2:top[nameField]||top.title||'–', top2sub:`Score ${Math.round(top.score||top.hot_score||0)} · ${top.status||''}` };
+  return { today:kpi, '7d':kpi, '30d':kpi, '3m':kpi };
 }
 
-function buildKPI(showRows, label1, label2) {
-  const sorted = [...showRows].sort((a,b) => b.score - a.score);
-  const top = sorted[0] || {};
-  const genreTotals = {};
-  showRows.forEach(r => genreTotals[r.genre] = (genreTotals[r.genre]||0) + (r.score||0));
-  const topGenreKey = Object.entries(genreTotals).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'kdrama';
-  const topGenreLabel = DG[topGenreKey]?.label || 'K-Drama';
-  const totalSearches = showRows.reduce((a,r) => a + (r.search_volume||0), 0);
-
-  return {
-    today: {
-      searches:   formatVol(totalSearches) || '–',
-      searchesSub:'Updated ' + new Date().toLocaleDateString('en-SG'),
-      top1:       topGenreLabel,
-      top1sub:    `${genreTotals[topGenreKey]?.toFixed(0) || 0} score total`,
-      top2:       top.name || '–',
-      top2sub:    `Score ${Math.round(top.score||0)} · ${top.status||''}`,
-    },
-  };
+function buildArtists(rows) {
+  const out={ all:[], kdrama:[], cdrama:[], local:[], thai:[], western:[], others:[] };
+  rows.forEach(r => {
+    const a={ g:r.genre, name:r.name, role:r.role||'Actor', show:r.show_name||'', score:Math.round(r.score||0), vol:fmtVol(r.search_volume||0), trend:r.trend||'→', spark:r.sparkline_shape||'stable' };
+    out.all.push(a);
+    if(out[r.genre]) out[r.genre].push(a);
+  });
+  return out;
 }
 
-// ── SHOW LOADING STATE ────────────────────────────────────────────────────
-
-function showLoadingState() {
-  document.getElementById('panel').innerHTML = `
-    <div style="padding:48px 20px;text-align:center;color:var(--t3);">
-      <div style="font-size:28px;margin-bottom:10px;">⏳</div>
-      <div style="font-size:13px;color:var(--t2);">Loading live data from Supabase…</div>
-    </div>`;
+function buildEvents(rows) {
+  const out={ all:[], kdrama:[], cdrama:[], local:[], thai:[], western:[], others:[] };
+  rows.forEach(r => {
+    const e={ g:r.genre, title:r.title, type:r.type||'Event', date:r.event_date||'', venue:r.venue||'', status:r.status||'Upcoming', hot:Math.round(r.hot_score||0), vol:r.search_vol||'–', spark:r.sparkline_shape||'stable', desc:r.description||'', links:(typeof r.links==='string'?JSON.parse(r.links):r.links)||[] };
+    out.all.push(e);
+    if(out[r.genre]) out[r.genre].push(e);
+  });
+  return out;
 }
 
-function showErrorState(msg) {
-  document.getElementById('panel').innerHTML = `
-    <div style="padding:48px 20px;text-align:center;color:var(--t3);">
-      <div style="font-size:28px;margin-bottom:10px;">⚠️</div>
-      <div style="font-size:13px;color:var(--t2);margin-bottom:6px;">Could not load live data</div>
-      <div style="font-size:11px;color:var(--t3);">Showing mock data instead. Error: ${msg}</div>
-    </div>`;
+
+// ── PAGE STATE — loading / error overlay ─────────────────────────────────
+
+function showPageState(type, msg) {
+  // Remove existing overlay if any
+  document.getElementById('page-state')?.remove();
+
+  const isLoading = type === 'loading';
+  const overlay = document.createElement('div');
+  overlay.id = 'page-state';
+  overlay.style.cssText = `
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:var(--bg); z-index:999;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:16px; font-family:var(--font);
+  `;
+
+  if (isLoading) {
+    overlay.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:34px;height:34px;border-radius:9px;background:#7F77DD;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#fff;flex-shrink:0;">DW</div>
+        <div>
+          <div style="font-size:15px;font-weight:500;color:var(--t1);">Drama Watch SG</div>
+          <div style="font-size:11px;color:var(--t3);">Tracking what Singapore searches in drama</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:32px;height:32px;border:3px solid #EEEDFE;border-top-color:#7F77DD;border-radius:50%;animation:spin .8s linear infinite;"></div>
+        <div style="font-size:13px;color:var(--t2);">Loading live data…</div>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    `;
+  } else {
+    // Error state
+    overlay.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="width:34px;height:34px;border-radius:9px;background:#7F77DD;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#fff;">DW</div>
+        <div>
+          <div style="font-size:15px;font-weight:500;color:var(--t1);">Drama Watch SG</div>
+          <div style="font-size:11px;color:var(--t3);">Tracking what Singapore searches in drama</div>
+        </div>
+      </div>
+      <div style="text-align:center;max-width:320px;">
+        <div style="font-size:28px;margin-bottom:10px;">⚠️</div>
+        <div style="font-size:14px;font-weight:500;color:var(--t1);margin-bottom:6px;">Could not load data</div>
+        <div style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:16px;">Unable to connect to the database. Please check your internet connection and try again.</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:16px;font-family:var(--mono);">${msg||''}</div>
+        <button onclick="loadLiveData()" style="padding:8px 20px;background:#1A1A18;color:#fff;border:none;border-radius:20px;font-size:13px;font-family:var(--font);cursor:pointer;font-weight:500;">
+          Try again
+        </button>
+      </div>
+    `;
+  }
+
+  document.body.appendChild(overlay);
 }
 
-// ── MAIN LOADER ───────────────────────────────────────────────────────────
+function hidePageState() {
+  const el = document.getElementById('page-state');
+  if (!el) return;
+  el.style.transition = 'opacity .3s';
+  el.style.opacity = '0';
+  setTimeout(() => el.remove(), 300);
+}
 
 async function loadLiveData() {
-  showLoadingState();
+  // Show full-page loading state — covers everything until data is ready
+  showPageState('loading');
 
   try {
-    // Fetch all tables in parallel
     const [showRows, artistRows, eventRows] = await Promise.all([
       sbFetch('shows',   'select=*&order=score.desc'),
       sbFetch('artists', 'select=*&order=score.desc'),
@@ -821,60 +724,54 @@ async function loadLiveData() {
 
     console.log(`✅ Loaded: ${showRows.length} shows, ${artistRows.length} artists, ${eventRows.length} events`);
 
-    // Only replace mock data if we actually got rows back
     if (showRows.length > 0) {
-      // Replace DRAMA with live data
-      const liveDrama = mapShows(showRows);
-      Object.assign(DRAMA, liveDrama);
-
-      // Replace scores/status/vol
-      const { scores, statuses, vols } = mapScores(showRows);
-      Object.assign(D_SCORES,  scores);
-      Object.assign(D_STATUS,  statuses);
-      Object.assign(D_VOL,     vols);
-
-      // Replace genre ranks
-      const liveRanks = mapRanks(showRows);
-      ['today','7d','30d','3m'].forEach(p => Object.assign(D_RANKS[p], liveRanks));
+      Object.assign(DRAMA, buildDrama(showRows));
+      const { scores, statuses, vols } = buildScores(showRows);
+      Object.assign(D_SCORES, scores);
+      Object.assign(D_STATUS, statuses);
+      Object.assign(D_VOL,    vols);
+      Object.assign(D_RANKS,  buildRanks(showRows));
+      Object.assign(D_KPI,    buildKPI(showRows, 'name'));
     }
 
     if (artistRows.length > 0) {
-      const liveArtists = mapArtists(artistRows);
-      Object.assign(ARTISTS, liveArtists);
+      Object.assign(ARTISTS,  buildArtists(artistRows));
+      Object.assign(AR_KPI,   buildKPI(artistRows, 'name'));
+      Object.assign(AR_RANKS, buildRanks(artistRows));
     }
 
     if (eventRows.length > 0) {
-      const liveEvents = mapEvents(eventRows);
-      Object.assign(EVENTS, liveEvents);
+      Object.assign(EVENTS,   buildEvents(eventRows));
+      Object.assign(EV_KPI,   buildKPI(eventRows, 'title'));
+      Object.assign(EV_RANKS, buildRanks(eventRows));
     }
 
-    // Update the live badge to show last updated time
+    // Update live badge
     const lastUpdated = showRows[0]?.updated_at
-      ? new Date(showRows[0].updated_at).toLocaleTimeString('en-SG', { hour:'2-digit', minute:'2-digit' })
+      ? new Date(showRows[0].updated_at).toLocaleString('en-SG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
       : null;
     if (lastUpdated) {
-      document.querySelector('.live-pill').innerHTML =
-        `<span class="ldot"></span>Live · Updated ${lastUpdated}`;
+      document.querySelector('.live-pill').innerHTML = `<span class="ldot"></span>Live · ${lastUpdated}`;
     }
-
-    // Remove mock tag
-    const mockTag = document.querySelector('.mock-tag');
-    if (mockTag) mockTag.remove();
+    document.querySelector('.mock-tag')?.remove();
 
   } catch (err) {
-    console.warn('⚠️ Supabase fetch failed, using mock data:', err.message);
-    // Falls back to mock data silently — site still works
+    console.error('❌ Supabase error:', err.message);
+    showPageState('error', err.message);
+    return; // Don't call updateAll — show error state instead
   }
 
-  // Always call updateAll — uses live data if loaded, mock data if not
+  // Hide loading overlay and show the real page
+  hidePageState();
+
   updateAll();
 }
 
-// Start loading live data instead of mock data
-loadLiveData();
-
-// ── AUTO REFRESH every 30 minutes ────────────────────────────────────────
+// Auto-refresh every 30 minutes
 setInterval(loadLiveData, 30 * 60 * 1000);
+
+// Start
+loadLiveData();
 
 </script>
 </body>
