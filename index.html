@@ -463,7 +463,7 @@ async function renderChart() {
     today: { days: 2,  table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
     '7d':  { days: 7,  table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
     '30d': { days: 30, table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
-    '3m':  { days: 90, table: 'shows_history',   id: 'show_id',   groupBy: 'week'},
+    '3m':  { days: 90, table: 'shows_history',   id: 'show_id',   groupBy: 'day'},
   };
 
   const cfg = periodConfig[period] || periodConfig['today'];
@@ -484,7 +484,7 @@ async function renderChart() {
   let histRows = [];
   try {
     const res = await fetch(
-      `${SB_URL}/rest/v1/${histTable}?select=${idField},score,recorded_at&recorded_at=gte.${fromStr}T00:00:00Z&order=recorded_at.asc&limit=5000`,
+      `${SB_URL}/rest/v1/${histTable}?select=${idField},score,recorded_at&recorded_at=gte.${fromStr}T00:00:00Z&order=recorded_at.asc&limit=20000`,
       { headers: SB_HEADERS }
     );
     if(res.ok) histRows = await res.json();
@@ -572,7 +572,7 @@ async function renderChart() {
           ticks:{
             font:{size:10},
             color:'#9C9C96',
-            maxTicksLimit: cfg.days<=7 ? 7 : cfg.days<=30 ? 10 : 13,
+            maxTicksLimit: cfg.days<=7 ? 7 : cfg.days<=30 ? 10 : 15,
           }
         },
         y:{
