@@ -236,7 +236,7 @@ def enrich_event_from_rss(title: str, entries: list) -> dict:
 
 def fetch_related_queries(pytrends, term: str) -> list:
     try:
-        pytrends.build_payload([term], geo="SG", timeframe="today 1-d")
+        pytrends.build_payload([term], geo="SG", timeframe="now 7-d")
         related = pytrends.related_queries()
         if term not in related: return []
         top = related[term].get("top")
@@ -246,14 +246,18 @@ def fetch_related_queries(pytrends, term: str) -> list:
         log.warning(f"Related queries error '{term}': {e}"); return []
 
 def fetch_yesterday_score(pytrends, term: str) -> float:
-    """Fetch yesterday's Google Trends score for a term in SG."""
+    """
+    Fetch Google Trends score for a term in SG.
+    Uses now 7-d timeframe — more reliable than today 1-d.
+    Returns average of last 7 days as the current score.
+    """
     try:
-        pytrends.build_payload([term], geo="SG", timeframe="today 1-d")
+        pytrends.build_payload([term], geo="SG", timeframe="now 7-d")
         df = pytrends.interest_over_time()
         if df.empty or term not in df.columns: return 0.0
         return float(df[term].mean())
     except Exception as e:
-        log.warning(f"Yesterday score error '{term}': {e}"); return 0.0
+        log.warning(f"Score error '{term}': {e}"); return 0.0
 
 def normalise(scores: dict) -> dict:
     """Normalise {name: raw_score} to 0-100."""
