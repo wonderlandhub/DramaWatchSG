@@ -1,0 +1,41 @@
+# .github/workflows/scraper_init.yml
+# Run ONCE manually to bootstrap the database with real data from 1st May.
+# Never runs automatically — only when you trigger it manually.
+# After successful run, you can disable this workflow.
+
+name: Drama Watch SG — Init (run once)
+
+on:
+  workflow_dispatch:    # manual trigger only
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120   # Google Trends for 30 days of history takes time
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run init scraper
+        env:
+          SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:  ${{ secrets.SUPABASE_KEY }}
+          TMDB_API_KEY:  ${{ secrets.TMDB_API_KEY }}
+        run: python scraper_init.py
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: init-log-${{ github.run_number }}
+          path: "*.log"
+          retention-days: 14
