@@ -91,76 +91,152 @@ RSS_FEEDS = [
 
 SEED_SHOWS = [
 
-    # ── K-DRAMA ──────────────────────────────────────────────────────────
+    # ── K-DRAMA 2026 ──────────────────────────────────────────────────────
+    # Sources: Her World SG, Singapore Women's Weekly, Harper's Bazaar SG
+
+    # Currently airing / recently finished
     {
         "name":        "Perfect Crown",
         "genre":       "kdrama",
-        "context":     "Byeon Woo-seok and IU — most anticipated K-Drama of 2026 in SG",
+        "context":     "IU and Byeon Woo-seok — Disney+ biggest K-Drama premiere 2026",
         "search_term": "Perfect Crown",
         "tmdb_id":     None,
     },
     {
-        "name":        "Tempest Korean Drama",
+        "name":        "Tempest",
         "genre":       "kdrama",
-        "context":     "Gianna Jun political thriller — SG fans waiting eagerly",
+        "context":     "Gianna Jun and Gang Dong-won espionage thriller on Disney+",
         "search_term": "Tempest",
         "tmdb_id":     None,
     },
     {
         "name":        "My Royal Nemesis",
         "genre":       "kdrama",
-        "context":     "Time-travel enemies-to-lovers — trending on Netflix SG",
+        "context":     "Lim Ji-yeon time-slip enemies-to-lovers on Netflix SG",
         "search_term": "My Royal Nemesis",
         "tmdb_id":     None,
     },
     {
         "name":        "The Remarried Empress",
         "genre":       "kdrama",
-        "context":     "Shin Min-A fantasy romance — highly anticipated in SG",
+        "context":     "Shin Min-A and Hyun Bin fantasy romance — coming to Disney+",
         "search_term": "The Remarried Empress",
         "tmdb_id":     None,
     },
     {
         "name":        "Bloodhounds Season 2",
         "genre":       "kdrama",
-        "context":     "Action sequel — SG fans of Season 1 waiting",
+        "context":     "Action sequel on Disney+ — SG fans of Season 1 waiting",
         "search_term": "Bloodhounds Season 2",
         "tmdb_id":     None,
     },
     {
         "name":        "Bad Guys Reign of Chaos",
         "genre":       "kdrama",
-        "context":     "Crime action — Ma Dong-Seok on Viu SG",
+        "context":     "Ma Dong-Seok crime action on Viu SG",
         "search_term": "Bad Guys Reign of Chaos",
         "tmdb_id":     None,
     },
     {
-        "name":        "Karma Korean Drama",
+        "name":        "Karma",
         "genre":       "kdrama",
-        "context":     "Slow-burn thriller — Park Hae-soo gaining SG traction",
+        "context":     "Park Hae-soo slow-burn thriller — gaining SG traction",
         "search_term": "Karma",
         "tmdb_id":     None,
     },
     {
+        "name":        "When Life Gives You Tangerines",
+        "genre":       "kdrama",
+        "context":     "IU heartwarming drama — actively discussed in SG on Netflix",
+        "search_term": "When Life Gives You Tangerines",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "The Wonderfools",
+        "genre":       "kdrama",
+        "context":     "Cha Eun-woo Netflix drama — premiered May 15 2026",
+        "search_term": "The Wonderfools",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Slowly Intensely",
+        "genre":       "kdrama",
+        "context":     "Song Hye-kyo and Gong Yoo Netflix reunion — most anticipated 2026",
+        "search_term": "Slowly Intensely",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Study Group",
+        "genre":       "kdrama",
+        "context":     "Hwang Min-hyun action webtoon drama on Viu",
+        "search_term": "Study Group",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Bogota City of the Lost",
+        "genre":       "kdrama",
+        "context":     "Song Joong-ki Netflix drama — crime thriller set in Colombia",
+        "search_term": "Bogota City of the Lost",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "The Koreans",
+        "genre":       "kdrama",
+        "context":     "Lee Byung-hun and Han Ji-min spy drama on Disney+",
+        "search_term": "The Koreans drama",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Squid Game Season 2",
+        "genre":       "kdrama",
+        "context":     "Global phenomenon — SG searches still strong on Netflix",
+        "search_term": "Squid Game Season 2",
+        "tmdb_id":     None,
+    },
+    # Timeless classics still being searched in SG
+    {
         "name":        "Queen of Tears",
         "genre":       "kdrama",
-        "context":     "2024 classic — still heavily rewatched by SG fans",
+        "context":     "2024 classic — still heavily rewatched by SG fans on Netflix",
         "search_term": "Queen of Tears",
         "tmdb_id":     202431,
     },
+    {
+        "name":        "Lovely Runner",
+        "genre":       "kdrama",
+        "context":     "Byeon Woo-seok time-travel romance — rewatched in SG",
+        "search_term": "Lovely Runner",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Crash Landing on You",
+        "genre":       "kdrama",
+        "context":     "Timeless classic — consistent SG rewatch community on Netflix",
+        "search_term": "Crash Landing on You",
+        "tmdb_id":     130392,
+    },
+    {
+        "name":        "Vincenzo",
+        "genre":       "kdrama",
+        "context":     "Song Joong-ki crime thriller — still popular in SG",
+        "search_term": "Vincenzo",
+        "tmdb_id":     None,
+    },
 
-    # ── C-DRAMA ──────────────────────────────────────────────────────────
+    # ── C-DRAMA 2026 ──────────────────────────────────────────────────────
+    # Sources: Her World SG, Singapore Women's Weekly, Tonboriday
+
     {
         "name":        "How Dare You",
         "genre":       "cdrama",
-        "context":     "Transmigration comedy — dominating SG C-Drama discussions",
+        "context":     "Transmigration comedy — dominating SG C-Drama discussions on iQIYI",
         "search_term": "How Dare You",
         "tmdb_id":     None,
     },
     {
         "name":        "My Page in the 90s",
         "genre":       "cdrama",
-        "context":     "Chen Xingxu time-travel romance — SG fans loving the 90s nostalgia",
+        "context":     "Chen Xingxu time-travel romance — SG fans loving 90s nostalgia",
         "search_term": "My Page in the 90s",
         "tmdb_id":     None,
     },
@@ -172,46 +248,83 @@ SEED_SHOWS = [
         "tmdb_id":     None,
     },
     {
-        "name":        "The Story of Rose",
+        "name":        "Pursuit of Jade",
         "genre":       "cdrama",
-        "context":     "2024 classic — still actively discussed in SG",
-        "search_term": "The Story of Rose",
+        "context":     "Zhang Linghe historical romance — trending on Netflix and iQIYI SG",
+        "search_term": "Pursuit of Jade",
         "tmdb_id":     None,
     },
     {
-        "name":        "Nirvana in Fire",
+        "name":        "The Story of Rose",
         "genre":       "cdrama",
-        "context":     "Timeless C-Drama classic — steady SG rewatch community",
-        "search_term": "Nirvana in Fire",
+        "context":     "Liu Yifei modern drama — still actively discussed in SG on WeTV",
+        "search_term": "The Story of Rose",
         "tmdb_id":     None,
     },
     {
         "name":        "Blossoms Shanghai",
         "genre":       "cdrama",
-        "context":     "Wong Kar-wai masterpiece — SG fans still recommending",
+        "context":     "Wong Kar-wai masterpiece — SG fans still recommending on iQIYI",
         "search_term": "Blossoms Shanghai",
         "tmdb_id":     None,
     },
-
-    # ── LOCAL SG ─────────────────────────────────────────────────────────
     {
-        "name":        "Emerald Hill",
+        "name":        "The Double",
+        "genre":       "cdrama",
+        "context":     "Revenge period drama — strong SG word-of-mouth",
+        "search_term": "The Double",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "The Untamed",
+        "genre":       "cdrama",
+        "context":     "Xiao Zhan and Wang Yibo — timeless BL classic rewatched in SG",
+        "search_term": "The Untamed",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Nirvana in Fire",
+        "genre":       "cdrama",
+        "context":     "Timeless C-Drama classic — steady SG rewatch community on iQIYI",
+        "search_term": "Nirvana in Fire",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Love Like the Galaxy",
+        "genre":       "cdrama",
+        "context":     "Historical romance — loyal SG xianxia fan community on WeTV",
+        "search_term": "Love Like the Galaxy",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Go Ahead",
+        "genre":       "cdrama",
+        "context":     "Family drama — still recommended in SG groups on iQIYI",
+        "search_term": "Go Ahead",
+        "tmdb_id":     None,
+    },
+
+    # ── LOCAL SG 2026 ─────────────────────────────────────────────────────
+    # Sources: Star Awards 2026, Mediacorp, meWatch
+
+    {
+        "name":        "Emerald Hill Little Nyonya Story",
         "genre":       "local",
         "context":     "Star Awards 2026 biggest winner — 6 awards including Best Drama",
         "search_term": "Emerald Hill Little Nyonya Story",
         "tmdb_id":     None,
     },
     {
-        "name":        "Pure Vanilla Singapore",
+        "name":        "Pure Vanilla",
         "genre":       "local",
-        "context":     "New 2026 SG drama — gaining local viewership",
+        "context":     "New 2026 SG drama — gaining local viewership on meWatch",
         "search_term": "Pure Vanilla",
         "tmdb_id":     None,
     },
     {
-        "name":        "People Like Us Singapore",
+        "name":        "People Like Us",
         "genre":       "local",
-        "context":     "SG community drama — relatable local stories",
+        "context":     "SG community drama — relatable heartland stories on Channel 8",
         "search_term": "People Like Us",
         "tmdb_id":     None,
     },
@@ -222,80 +335,191 @@ SEED_SHOWS = [
         "search_term": "128 Circle",
         "tmdb_id":     None,
     },
-
-    # ── THAI ─────────────────────────────────────────────────────────────
     {
-        "name":        "Hometown Romance Thai",
-        "genre":       "thai",
-        "context":     "Thai countryside rom-com — SG BL fans following",
-        "search_term": "Hometown Romance",
+        "name":        "The Little Nyonya",
+        "genre":       "local",
+        "context":     "Iconic 2008 Peranakan drama — rewatched ahead of sequel",
+        "search_term": "The Little Nyonya",
         "tmdb_id":     None,
     },
     {
-        "name":        "Moonshadow Thai Drama",
+        "name":        "Unforgivable",
+        "genre":       "local",
+        "context":     "Star Awards 2025 Best Drama — still being discussed in SG",
+        "search_term": "Unforgivable",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Code of Law",
+        "genre":       "local",
+        "context":     "Long-running SG legal drama — loyal local following on meWatch",
+        "search_term": "Code of Law",
+        "tmdb_id":     None,
+    },
+
+    # ── THAI 2026 ─────────────────────────────────────────────────────────
+    # Sources: Harper's Bazaar SG, GMMTV 2026 lineup, Channel 3
+
+    {
+        "name":        "Beneath The Lies",
         "genre":       "thai",
-        "context":     "Thai BL sequel — Emi and Bonnie returning",
+        "context":     "Gulf Kanawut and Yaya Urassaya — massive Channel 3 production 2026",
+        "search_term": "Beneath The Lies",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Girl From Nowhere The Reset",
+        "genre":       "thai",
+        "context":     "Cult Thai thriller reboot — Becky Armstrong on Netflix",
+        "search_term": "Girl From Nowhere The Reset",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Moonshadow",
+        "genre":       "thai",
+        "context":     "Emi and Bonnie GL sequel — highly anticipated in SG",
         "search_term": "Moonshadow",
         "tmdb_id":     None,
     },
     {
         "name":        "Only Friends",
         "genre":       "thai",
-        "context":     "GMMTV BL — still active SG fan community",
+        "context":     "GMMTV BL — still active SG fan community on WeTV",
         "search_term": "Only Friends",
         "tmdb_id":     None,
     },
     {
         "name":        "Hidden Agenda",
         "genre":       "thai",
-        "context":     "Thai BL — word-of-mouth growing in SG",
+        "context":     "Thai BL — word-of-mouth growing in SG on WeTV",
         "search_term": "Hidden Agenda",
         "tmdb_id":     None,
     },
+    {
+        "name":        "Bad Buddy",
+        "genre":       "thai",
+        "context":     "GMMTV BL classic — timeless SG rewatch favourite",
+        "search_term": "Bad Buddy",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "2gether The Series",
+        "genre":       "thai",
+        "context":     "Thai BL pioneer — long-tail rewatches in SG",
+        "search_term": "2gether The Series",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "A Tale of Thousand Stars",
+        "genre":       "thai",
+        "context":     "Scenic Thai countryside — travel curiosity among SG viewers",
+        "search_term": "A Tale of Thousand Stars",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Hometown Romance",
+        "genre":       "thai",
+        "context":     "Thai countryside rom-com — SG fans following on WeTV",
+        "search_term": "Hometown Romance",
+        "tmdb_id":     None,
+    },
 
-    # ── WESTERN ──────────────────────────────────────────────────────────
+    # ── WESTERN 2026 ──────────────────────────────────────────────────────
+    # Sources: Netflix SG, Disney+ SG, Harper's Bazaar SG
+
     {
         "name":        "Bridgerton Season 4",
         "genre":       "western",
-        "context":     "Benedict Bridgerton arc — SG fans eagerly waiting",
+        "context":     "Benedict Bridgerton arc — SG fans eagerly waiting on Netflix",
         "search_term": "Bridgerton Season 4",
         "tmdb_id":     92783,
     },
     {
         "name":        "Suits LA",
         "genre":       "western",
-        "context":     "Suits spinoff — SG legal drama fans following",
+        "context":     "Suits spinoff — SG legal drama fans on Netflix",
         "search_term": "Suits LA",
         "tmdb_id":     None,
     },
     {
         "name":        "The White Lotus Season 3",
         "genre":       "western",
-        "context":     "Thailand setting — SG viewers very engaged",
+        "context":     "Thailand setting — SG viewers very engaged on HBO/Max",
         "search_term": "The White Lotus Season 3",
         "tmdb_id":     None,
     },
+    {
+        "name":        "Emily in Paris",
+        "genre":       "western",
+        "context":     "Guilty pleasure — love-hate relationship with SG viewers on Netflix",
+        "search_term": "Emily in Paris",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Virgin River",
+        "genre":       "western",
+        "context":     "Cosy small-town romance — loyal SG binge-watching audience on Netflix",
+        "search_term": "Virgin River",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Outlander",
+        "genre":       "western",
+        "context":     "Epic time-travel romance — loyal SG fandom on Netflix",
+        "search_term": "Outlander",
+        "tmdb_id":     None,
+    },
 
-    # ── OTHERS ───────────────────────────────────────────────────────────
+    # ── OTHERS 2026 ───────────────────────────────────────────────────────
+    # Turkish, Japanese, Indian — active SG community searches
+
     {
         "name":        "Dirilis Ertugrul",
         "genre":       "others",
-        "context":     "Turkish epic — loyal SG Malay community still active",
+        "context":     "Turkish epic — loyal SG Malay community still active on Netflix",
         "search_term": "Dirilis Ertugrul",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Kurulus Osman",
+        "genre":       "others",
+        "context":     "Ertugrul sequel — SG Malay fans following on Netflix",
+        "search_term": "Kurulus Osman",
         "tmdb_id":     None,
     },
     {
         "name":        "Scam 1992",
         "genre":       "others",
-        "context":     "Indian drama — SG viewers calling it essential viewing",
+        "context":     "Indian drama — SG viewers calling it essential viewing on ZEE5",
         "search_term": "Scam 1992",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Panchayat",
+        "genre":       "others",
+        "context":     "Indian drama on Amazon Prime — SG Indian community recommending",
+        "search_term": "Panchayat",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Mirzapur",
+        "genre":       "others",
+        "context":     "Indian crime drama on Amazon Prime — SG Indian community watching",
+        "search_term": "Mirzapur",
         "tmdb_id":     None,
     },
     {
         "name":        "Oshin",
         "genre":       "others",
-        "context":     "J-Drama classic — nostalgia wave among older SG viewers",
+        "context":     "J-Drama classic — nostalgia wave among older SG viewers on YouTube",
         "search_term": "Oshin",
+        "tmdb_id":     None,
+    },
+    {
+        "name":        "Hana Yori Dango",
+        "genre":       "others",
+        "context":     "J-Drama classic — younger SG viewers discovering it on Netflix",
+        "search_term": "Hana Yori Dango",
         "tmdb_id":     None,
     },
 ]
@@ -304,36 +528,124 @@ SEED_SHOWS = [
 # Top searched drama artists in SG 2026
 # search_term = what SG people actually search
 SEED_ARTISTS = [
-    # K-Drama
-    {"name":"Byeon Woo-seok",    "show":"Perfect Crown",         "genre":"kdrama",  "search_term":"Byeon Woo-seok actor 2026"},
-    {"name":"IU",                "show":"Perfect Crown",         "genre":"kdrama",  "search_term":"IU actress Korean drama 2026"},
-    {"name":"Gianna Jun",        "show":"Tempest",               "genre":"kdrama",  "search_term":"Gianna Jun actress Tempest"},
-    {"name":"Shin Min-A",        "show":"The Remarried Empress",  "genre":"kdrama",  "search_term":"Shin Min-A actress 2026"},
-    {"name":"Song Hye-kyo",      "show":"Various",               "genre":"kdrama",  "search_term":"Song Hye-kyo actress 2026"},
-    {"name":"Gong Yoo",          "show":"Various",               "genre":"kdrama",  "search_term":"Gong Yoo actor 2026"},
-    {"name":"Kim Soo-hyun",      "show":"Queen of Tears",        "genre":"kdrama",  "search_term":"Kim Soo-hyun actor"},
-    {"name":"Park Hae-soo",      "show":"Karma Korean Drama",    "genre":"kdrama",  "search_term":"Park Hae-soo actor Karma"},
-    # C-Drama
-    {"name":"Cheng Lei",         "show":"How Dare You",          "genre":"cdrama",  "search_term":"Cheng Lei Chinese actor How Dare You"},
-    {"name":"Zhang Linghe",      "show":"Various",               "genre":"cdrama",  "search_term":"Zhang Linghe Chinese actor 2026"},
-    {"name":"Chen Xingxu",       "show":"My Page in the 90s",    "genre":"cdrama",  "search_term":"Chen Xingxu Chinese actor 2026"},
-    {"name":"Wang Churan",       "show":"How Dare You",          "genre":"cdrama",  "search_term":"Wang Churan Chinese actress 2026"},
-    {"name":"Liu Yifei",         "show":"The Story of Rose",     "genre":"cdrama",  "search_term":"Liu Yifei actress drama"},
-    {"name":"Hu Ge",             "show":"Nirvana in Fire",       "genre":"cdrama",  "search_term":"Hu Ge Chinese actor"},
-    # Local SG
-    {"name":"Carrie Wong",       "show":"Emerald Hill The Little Nyonya Story", "genre":"local", "search_term":"Carrie Wong Singapore actress 2026"},
-    {"name":"Zoe Tay",           "show":"Emerald Hill The Little Nyonya Story", "genre":"local", "search_term":"Zoe Tay Singapore actress"},
-    {"name":"Desmond Tan",       "show":"Various",               "genre":"local",   "search_term":"Desmond Tan Singapore actor"},
-    {"name":"Tay Ping Hui",      "show":"Various",               "genre":"local",   "search_term":"Tay Ping Hui Singapore actor"},
-    # Thai
-    {"name":"Joss Wachirawit",   "show":"Only Friends",          "genre":"thai",    "search_term":"Joss Wachirawit Thai actor"},
-    {"name":"Bright Vachirawit", "show":"Various",               "genre":"thai",    "search_term":"Bright Vachirawit Thai actor 2026"},
-    # Western
-    {"name":"Nicola Coughlan",   "show":"Bridgerton Season 4",   "genre":"western", "search_term":"Nicola Coughlan actress Bridgerton"},
-    {"name":"Jonathan Bailey",   "show":"Bridgerton Season 4",   "genre":"western", "search_term":"Jonathan Bailey actor Bridgerton"},
-    # Others
-    {"name":"Engin Altan",       "show":"Dirilis Ertugrul",      "genre":"others",  "search_term":"Engin Altan Duzyatan Turkish actor"},
-    {"name":"Pratik Gandhi",     "show":"Scam 1992",             "genre":"others",  "search_term":"Pratik Gandhi Indian actor Scam 1992"},
+
+    # ── K-DRAMA — Perfect Crown (Disney+, Apr 2026) ───────────────────────
+    # Cast: IU, Byeon Woo-seok, Gong Seung-yeon, Yu Su-bin, Lee Yeon
+    {"name":"Byeon Woo-seok",    "show":"Perfect Crown",              "genre":"kdrama",  "tmdb_id":1067226},
+    {"name":"IU",                "show":"Perfect Crown",              "genre":"kdrama",  "tmdb_id":976264},
+    {"name":"Gong Seung-yeon",   "show":"Perfect Crown",              "genre":"kdrama",  "tmdb_id":None},
+    {"name":"Lee Yeon",          "show":"Perfect Crown",              "genre":"kdrama",  "tmdb_id":None},
+
+    # ── K-DRAMA — Tempest (Disney+, Sep 2025) ────────────────────────────
+    # Cast: Gianna Jun, Gang Dong-won, Park Hae-joon, Lee Mi-sook
+    {"name":"Gianna Jun",        "show":"Tempest",                    "genre":"kdrama",  "tmdb_id":19543},
+    {"name":"Gang Dong-won",     "show":"Tempest",                    "genre":"kdrama",  "tmdb_id":None},
+    {"name":"Park Hae-joon",     "show":"Tempest",                    "genre":"kdrama",  "tmdb_id":None},
+
+    # ── K-DRAMA — When Life Gives You Tangerines (Netflix, 2025) ─────────
+    # Cast: IU, Park Bo-gum
+    {"name":"Park Bo-gum",       "show":"When Life Gives You Tangerines","genre":"kdrama","tmdb_id":None},
+
+    # ── K-DRAMA — Other top K-Drama actors searched in SG ────────────────
+    {"name":"Shin Min-A",        "show":"The Remarried Empress",      "genre":"kdrama",  "tmdb_id":19429},
+    {"name":"Song Hye-kyo",      "show":"The Glory",                  "genre":"kdrama",  "tmdb_id":19492},
+    {"name":"Gong Yoo",          "show":"Various",                    "genre":"kdrama",  "tmdb_id":19217},
+    {"name":"Kim Soo-hyun",      "show":"Queen of Tears",             "genre":"kdrama",  "tmdb_id":55168},
+    {"name":"Kim Ji-won",        "show":"Queen of Tears",             "genre":"kdrama",  "tmdb_id":1726172},
+    {"name":"Park Hae-soo",      "show":"Karma",                      "genre":"kdrama",  "tmdb_id":2974862},
+    {"name":"Lee Min-ho",        "show":"Various",                    "genre":"kdrama",  "tmdb_id":1271717},
+    {"name":"Park Seo-joon",     "show":"Various",                    "genre":"kdrama",  "tmdb_id":1271757},
+    {"name":"Son Ye-jin",        "show":"Crash Landing on You",       "genre":"kdrama",  "tmdb_id":19430},
+    {"name":"Han So-hee",        "show":"Various",                    "genre":"kdrama",  "tmdb_id":2613816},
+    {"name":"Go Youn-jung",      "show":"Various",                    "genre":"kdrama",  "tmdb_id":3490526},
+    {"name":"Cha Eun-woo",       "show":"Various",                    "genre":"kdrama",  "tmdb_id":2254676},
+    {"name":"Park Bo-young",     "show":"Various",                    "genre":"kdrama",  "tmdb_id":975376},
+    {"name":"Lim Yoona",         "show":"Various",                    "genre":"kdrama",  "tmdb_id":19458},
+    {"name":"Song Joong-ki",     "show":"Vincenzo",                   "genre":"kdrama",  "tmdb_id":None},
+    {"name":"Lee Jong-suk",      "show":"Various",                    "genre":"kdrama",  "tmdb_id":None},
+    {"name":"Hyun Bin",          "show":"Crash Landing on You",       "genre":"kdrama",  "tmdb_id":None},
+
+    # ── C-DRAMA — How Dare You (iQIYI/Netflix, 2026) ─────────────────────
+    # Cast: Cheng Lei, Wang Churan, Tian Xiwei, Zhang Linghe
+    {"name":"Cheng Lei",         "show":"How Dare You",               "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Wang Churan",       "show":"How Dare You",               "genre":"cdrama",  "tmdb_id":None},
+
+    # ── C-DRAMA — Pursuit of Jade (Netflix/iQIYI, 2026) ──────────────────
+    # Cast: Tian Xiwei, Zhang Linghe
+    {"name":"Zhang Linghe",      "show":"Pursuit of Jade",            "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Tian Xiwei",        "show":"Pursuit of Jade",            "genre":"cdrama",  "tmdb_id":None},
+
+    # ── C-DRAMA — Shine on Me (Netflix, 2026) ────────────────────────────
+    # Cast: Song Weilong, Zhao Jinmai
+    {"name":"Song Weilong",      "show":"Shine on Me",                "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Zhao Jinmai",       "show":"Shine on Me",                "genre":"cdrama",  "tmdb_id":None},
+
+    # ── C-DRAMA — Other top C-Drama actors searched in SG ────────────────
+    {"name":"Chen Xingxu",       "show":"My Page in the 90s",         "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Liu Yifei",         "show":"The Story of Rose",          "genre":"cdrama",  "tmdb_id":16000},
+    {"name":"Hu Ge",             "show":"Nirvana in Fire",            "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Xiao Zhan",         "show":"The Untamed",                "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Wang Yibo",         "show":"The Untamed",                "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Yang Mi",           "show":"Various",                    "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Zhao Liying",       "show":"Various",                    "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Dilireba",          "show":"Various",                    "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Yang Zi",           "show":"Various",                    "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Zhao Lusi",         "show":"Various",                    "genre":"cdrama",  "tmdb_id":None},
+    {"name":"Bai Lu",            "show":"Various",                    "genre":"cdrama",  "tmdb_id":None},
+
+    # ── LOCAL SG — Emerald Hill Little Nyonya Story (Channel 8, 2026) ────
+    # Star Awards 2026 — 6 awards including Best Drama, Best Actress (Jesseca Liu)
+    {"name":"Carrie Wong",       "show":"Emerald Hill Little Nyonya Story","genre":"local","tmdb_id":None},
+    {"name":"Jesseca Liu",       "show":"Emerald Hill Little Nyonya Story","genre":"local","tmdb_id":None},
+    {"name":"Zoe Tay",           "show":"Emerald Hill Little Nyonya Story","genre":"local","tmdb_id":None},
+
+    # ── LOCAL SG — Other top local SG actors searched ────────────────────
+    {"name":"Desmond Tan",       "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Tay Ping Hui",      "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Rebecca Lim",       "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Joanne Peh",        "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Pierre Png",        "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Fann Wong",         "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Chen Hanwei",       "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Romeo Tan",         "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Felicia Chin",      "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Rui En",            "show":"Various",                    "genre":"local",   "tmdb_id":None},
+    {"name":"Thomas Ong",        "show":"Various",                    "genre":"local",   "tmdb_id":None},
+
+    # ── THAI — Beneath The Lies (Channel 3, 2026) ────────────────────────
+    # Cast: Gulf Kanawut, Yaya Urassaya, Kao Noppakao
+    {"name":"Gulf Kanawut",      "show":"Beneath The Lies",           "genre":"thai",    "tmdb_id":None},
+    {"name":"Yaya Urassaya",     "show":"Beneath The Lies",           "genre":"thai",    "tmdb_id":None},
+
+    # ── THAI — GMMTV 2026 top actors ─────────────────────────────────────
+    {"name":"Joss Wachirawit",   "show":"Only Friends",               "genre":"thai",    "tmdb_id":None},
+    {"name":"Bright Vachirawit", "show":"2gether The Series",         "genre":"thai",    "tmdb_id":None},
+    {"name":"Mew Suppasit",      "show":"Various",                    "genre":"thai",    "tmdb_id":None},
+    {"name":"Win Metawin",       "show":"2gether The Series",         "genre":"thai",    "tmdb_id":None},
+    {"name":"Apo Nattawin",      "show":"Various",                    "genre":"thai",    "tmdb_id":None},
+    {"name":"Mile Phakphum",     "show":"Various",                    "genre":"thai",    "tmdb_id":None},
+    {"name":"New Thitipoom",     "show":"Hidden Agenda",              "genre":"thai",    "tmdb_id":None},
+    {"name":"Baifern Pimchanok", "show":"Various",                    "genre":"thai",    "tmdb_id":None},
+    {"name":"Nanon Korapat",     "show":"Various",                    "genre":"thai",    "tmdb_id":None},
+    {"name":"Ohm Thitiwat",      "show":"Various",                    "genre":"thai",    "tmdb_id":None},
+
+    # ── WESTERN — Bridgerton Season 4 (Netflix, 2026) ────────────────────
+    {"name":"Nicola Coughlan",   "show":"Bridgerton Season 4",        "genre":"western", "tmdb_id":1892381},
+    {"name":"Jonathan Bailey",   "show":"Bridgerton Season 4",        "genre":"western", "tmdb_id":1185649},
+    {"name":"Luke Thompson",     "show":"Bridgerton Season 4",        "genre":"western", "tmdb_id":None},
+
+    # ── WESTERN — Other top Western actors searched in SG ─────────────────
+    {"name":"Pedro Pascal",      "show":"Various",                    "genre":"western", "tmdb_id":1253360},
+    {"name":"Sydney Sweeney",    "show":"Various",                    "genre":"western", "tmdb_id":2195545},
+    {"name":"Millie Bobby Brown","show":"Various",                    "genre":"western", "tmdb_id":None},
+
+    # ── OTHERS — Turkish, Japanese, Indian ───────────────────────────────
+    {"name":"Engin Altan",       "show":"Dirilis Ertugrul",           "genre":"others",  "tmdb_id":None},
+    {"name":"Burak Ozcivit",     "show":"Kurulus Osman",              "genre":"others",  "tmdb_id":None},
+    {"name":"Can Yaman",         "show":"Various Turkish",            "genre":"others",  "tmdb_id":None},
+    {"name":"Pratik Gandhi",     "show":"Scam 1992",                  "genre":"others",  "tmdb_id":None},
+    {"name":"Takuya Kimura",     "show":"Various J-Drama",            "genre":"others",  "tmdb_id":None},
+    {"name":"Pankaj Tripathi",   "show":"Mirzapur",                   "genre":"others",  "tmdb_id":None},
 ]
 
 # ── 2026 SEED EVENTS ──────────────────────────────────────────────────────
@@ -500,9 +812,28 @@ def tmdb_search_show(name: str, tmdb_id: int = None) -> dict:
         return {}
 
 
-def tmdb_search_person(name: str) -> dict:
-    """Search TMDB for an artist."""
+def tmdb_search_person(name: str, tmdb_id: int = None) -> dict:
+    """Search TMDB for an artist. Use tmdb_id for direct lookup if available."""
     try:
+        if tmdb_id:
+            # Direct lookup by TMDB person ID — more accurate
+            url = f"{TMDB_BASE}/person/{tmdb_id}"
+            params = {"api_key": TMDB_API_KEY, "language": "en-SG",
+                      "append_to_response": "combined_credits"}
+            res = requests.get(url, params=params, timeout=10)
+            if res.ok:
+                person = res.json()
+                # Get most known drama role
+                cast = person.get("combined_credits", {}).get("cast", [])
+                cast_sorted = sorted(
+                    [c for c in cast if c.get("media_type") in ["tv","movie"]],
+                    key=lambda x: x.get("popularity", 0), reverse=True
+                )
+                show_name = cast_sorted[0].get("name") or cast_sorted[0].get("title","") if cast_sorted else ""
+                role = "Actress" if person.get("gender") == 1 else "Actor"
+                return {"tmdb_id": tmdb_id, "role": role, "show_name": show_name}
+
+        # Search by name
         url = f"{TMDB_BASE}/search/person"
         params = {"api_key": TMDB_API_KEY, "query": name, "language": "en-SG"}
         res = requests.get(url, params=params, timeout=10)
@@ -854,7 +1185,7 @@ def main():
         if not has_trends:
             log.warning(f"  No Trends data for {a['name']} — inserting with score=0")
 
-        tmdb = tmdb_search_person(a["name"])
+        tmdb = tmdb_search_person(a["name"], a.get("tmdb_id"))
         genre_id = genre_map.get(a["genre"]) or genre_map.get("others")
 
         # Find linked show_id
