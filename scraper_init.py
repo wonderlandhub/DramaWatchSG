@@ -7,7 +7,7 @@ Revised approach:
 - Google Trends direct scoring (reliable) — not related_queries
 - TMDB fills all content — description, Chinese title, platforms
 - RSS discovers any additional shows from news articles
-- Fetches daily scores from 1st May to today (~30 days)
+- Fetches daily scores from 1st Jan to today (~160+ days)
 - Inserts ~30 history rows per item — real sparklines from day one
 - Genre ranking derived from actual search scores
 
@@ -337,48 +337,88 @@ SEED_ARTISTS = [
 ]
 
 # ── 2026 SEED EVENTS ──────────────────────────────────────────────────────
-# Known SG drama events in 2026
-# Google Trends will score these directly
+# Real confirmed SG drama events in 2026
+# Sources: Wikipedia, Soompi, KBeats SG, Singapore Expo, Ticketmaster SG
 SEED_EVENTS = [
     {
-        "title":       "Star Awards 2026 Singapore",
+        "title":       "Star Awards 2026",
         "genre":       "local",
         "type":        "Awards",
-        "venue":       "MES Theatre Mediacorp",
+        "venue":       "MES Theatre @ Mediacorp",
         "event_date":  "Apr 19 2026",
-        "description": "Annual Star Awards ceremony celebrating excellence in Singapore TV drama. Emerald Hill won 6 awards including Best Drama.",
+        "description": "The 31st Star Awards ceremony celebrating excellence in Singapore TV drama. Themed 'Born to Glow'. Emerald Hill - The Little Nyonya Story won 6 awards including Best Drama. Jesseca Liu won Best Actress.",
         "search_term": "Star Awards 2026",
-        "links":       [{"l":"Mediacorp","u":"https://www.mediacorp.sg"}],
+        "links":       [{"l":"Mediacorp","u":"https://www.mediacorp.sg"},{"l":"meWatch","u":"https://www.mewatch.sg"}],
     },
     {
-        "title":       "K-Drama fan meet Singapore 2026",
-        "genre":       "kdrama",
+        "title":       "LingOrm Only Love Fan Meeting Singapore",
+        "genre":       "thai",
         "type":        "Fan Meet",
-        "venue":       "Singapore",
-        "event_date":  "2026",
-        "description": "K-Drama fan meet events in Singapore 2026 — cast appearances and fan gatherings.",
-        "search_term": "K-Drama fan meet Singapore",
+        "venue":       "ARENA@EXPO, Singapore Expo",
+        "event_date":  "Feb 21 2026",
+        "description": "Thai actress LingOrm's first solo fan meeting in Singapore. Tickets from $208–$388. Organised by SimpleLightCulture.",
+        "search_term": "LingOrm fan meeting Singapore",
+        "links":       [{"l":"Singapore Expo","u":"https://www.singaporeexpo.com.sg"}],
+    },
+    {
+        "title":       "SEVENTEEN World Tour Singapore",
+        "genre":       "kdrama",
+        "type":        "Concert",
+        "venue":       "National Stadium",
+        "event_date":  "Mar 7 2026",
+        "description": "SEVENTEEN NEW_ World Tour concert at the National Stadium Singapore. One of the biggest K-pop events of 2026 in SG.",
+        "search_term": "SEVENTEEN Singapore 2026",
         "links":       [{"l":"SISTIC","u":"https://www.sistic.com.sg"}],
     },
     {
-        "title":       "Netflix drama event Singapore",
+        "title":       "ATEEZ World Tour Singapore",
         "genre":       "kdrama",
-        "type":        "Pop-Up",
-        "venue":       "Singapore",
-        "event_date":  "2026",
-        "description": "Netflix drama activations and pop-up events in Singapore 2026.",
-        "search_term": "Netflix drama Singapore",
-        "links":       [{"l":"Netflix SG","u":"https://www.netflix.com/sg"}],
+        "type":        "Concert",
+        "venue":       "Singapore Indoor Stadium",
+        "event_date":  "Feb 22 2026",
+        "description": "ATEEZ 2026 World Tour 'IN YOUR FANTASY' at Singapore Indoor Stadium. High-energy performance from the globally acclaimed K-pop group.",
+        "search_term": "ATEEZ Singapore 2026",
+        "links":       [{"l":"SISTIC","u":"https://www.sistic.com.sg"}],
     },
     {
-        "title":       "GMMTV fan event Singapore 2026",
-        "genre":       "thai",
-        "type":        "Fan Event",
-        "venue":       "Singapore",
+        "title":       "NMIXX World Tour Singapore",
+        "genre":       "kdrama",
+        "type":        "Concert",
+        "venue":       "Singapore Indoor Stadium",
+        "event_date":  "Jun 20 2026",
+        "description": "NMIXX 1st World Tour EPISODE 1: ZERO FRONTIER in Singapore. JYP Entertainment's rising girl group performing live in SG.",
+        "search_term": "NMIXX Singapore 2026",
+        "links":       [{"l":"Ticketmaster","u":"https://ticketmaster.sg"}],
+    },
+    {
+        "title":       "i-dle World Tour Singapore",
+        "genre":       "kdrama",
+        "type":        "Concert",
+        "venue":       "Singapore Indoor Stadium",
+        "event_date":  "Jun 13 2026",
+        "description": "(G)I-DLE WORLD TOUR SYNCOPATION in Singapore. The acclaimed K-pop group known for self-produced music performs at the Singapore Indoor Stadium.",
+        "search_term": "G-IDLE Singapore 2026",
+        "links":       [{"l":"Ticketmaster","u":"https://ticketmaster.sg"}],
+    },
+    {
+        "title":       "TXT World Tour Singapore",
+        "genre":       "kdrama",
+        "type":        "Concert",
+        "venue":       "Singapore Indoor Stadium",
+        "event_date":  "Jan 17–18 2026",
+        "description": "TOMORROW X TOGETHER World Tour ACT: TOMORROW at Singapore Indoor Stadium. Two-night concert by BTS labelmates TXT.",
+        "search_term": "TXT Tomorrow X Together Singapore 2026",
+        "links":       [{"l":"SISTIC","u":"https://www.sistic.com.sg"}],
+    },
+    {
+        "title":       "Emerald Hill Little Nyonya Story",
+        "genre":       "local",
+        "type":        "Drama Series",
+        "venue":       "Channel 8 / meWatch",
         "event_date":  "2026",
-        "description": "GMMTV Thai drama fan events and gatherings in Singapore 2026.",
-        "search_term": "GMMTV Singapore",
-        "links":       [{"l":"GMMTV","u":"https://www.youtube.com/@GMMTV"}],
+        "description": "The most awarded drama at Star Awards 2026 — 6 awards including Best Drama. A sequel to the iconic Little Nyonya, exploring Peranakan heritage in modern Singapore.",
+        "search_term": "Emerald Hill Little Nyonya Story",
+        "links":       [{"l":"meWatch","u":"https://www.mewatch.sg"}],
     },
 ]
 
@@ -577,11 +617,14 @@ def discover_shows_from_rss(entries: list, known_names: set, genre_map: dict) ->
 
 def fetch_daily_scores(pytrends, term: str, name: str) -> list:
     """
-    Fetch daily Google Trends scores from 1st May to today.
-    Returns list of {date, score} dicts.
+    Fetch daily Google Trends scores from 1st Jan to today.
+    Returns list of {date, score} dicts — raw scores, not normalised.
+    Normalisation happens later across all shows per day.
     """
     try:
-        pytrends.build_payload([term], geo="SG", timeframe="today 1-m")
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        timeframe = f"2026-01-01 {today}"
+        pytrends.build_payload([term], geo="SG", timeframe=timeframe)
         df = pytrends.interest_over_time()
         if df.empty or term not in df.columns:
             log.warning(f"  No Trends data for '{name}'")
@@ -602,12 +645,7 @@ def fetch_daily_scores(pytrends, term: str, name: str) -> list:
 # ── SCORING HELPERS ───────────────────────────────────────────────────────
 
 def normalise_daily(daily_scores: list) -> list:
-    """Normalise daily scores to 0-100 within the item's own history."""
-    if not daily_scores:
-        return daily_scores
-    mx = max(s["score"] for s in daily_scores) or 1
-    for s in daily_scores:
-        s["normalised"] = round((s["score"] / mx) * 100, 1)
+    """Legacy — kept for compatibility. Per-day cross-show normalisation happens in Phase 5."""
     return daily_scores
 
 
@@ -650,7 +688,6 @@ def main():
     for s in SEED_SHOWS:
         daily = fetch_daily_scores(pytrends, s["search_term"], s["name"])
         if daily:
-            daily = normalise_daily(daily)
             show_scores[s["name"]] = daily
             total = sum(d["score"] for d in daily)
             genre_totals[s["genre"]] = genre_totals.get(s["genre"], 0) + total
@@ -663,7 +700,6 @@ def main():
     for a in SEED_ARTISTS:
         daily = fetch_daily_scores(pytrends, a["search_term"], a["name"])
         if daily:
-            daily = normalise_daily(daily)
             artist_scores[a["name"]] = daily
         time.sleep(TRENDS_DELAY)
 
@@ -674,7 +710,6 @@ def main():
     for e in SEED_EVENTS:
         daily = fetch_daily_scores(pytrends, e["search_term"], e["title"])
         if daily:
-            daily = normalise_daily(daily)
             event_scores[e["title"]] = daily
         time.sleep(TRENDS_DELAY)
 
@@ -873,80 +908,138 @@ def main():
             log.info(f"  ✅ Event: {e['title']}")
         time.sleep(0.2)
 
-    # ── PHASE 9: Insert history rows ──────────────────────────────────────
-    log.info("--- Phase 9: Inserting history rows ---")
+    # ── PHASE 9: Per-day cross-show normalisation + insert history rows ──────
+    log.info("--- Phase 9: Per-day cross-show normalisation + inserting history rows ---")
 
-    # Shows history
+    # Collect all dates across all items
+    all_dates = set()
+    for scores in list(show_scores.values()) + list(artist_scores.values()) + list(event_scores.values()):
+        for d in scores:
+            all_dates.add(d["date"].date())
+    all_dates = sorted(all_dates)
+    log.info(f"  Total days to process: {len(all_dates)}")
+
+    # Build per-date score lookup — {date: {name: raw_score}}
+    show_date_scores   = {}  # {name: {date: raw_score}}
+    artist_date_scores = {}
+    event_date_scores  = {}
+
+    for name, daily in show_scores.items():
+        show_date_scores[name] = {d["date"].date(): d["score"] for d in daily}
+
+    for name, daily in artist_scores.items():
+        artist_date_scores[name] = {d["date"].date(): d["score"] for d in daily}
+
+    for title, daily in event_scores.items():
+        event_date_scores[title] = {d["date"].date(): d["score"] for d in daily}
+
+    # Per-day normalisation across all items combined
+    # Find max score across ALL shows + artists + events for each day
+    # Then normalise everything relative to that day's maximum
+    show_norm_scores   = {name: {} for name in show_date_scores}
+    artist_norm_scores = {name: {} for name in artist_date_scores}
+    event_norm_scores  = {title: {} for title in event_date_scores}
+
+    for date in all_dates:
+        # Collect all raw scores for this day
+        day_scores = {}
+        for name in show_date_scores:
+            day_scores[("show", name)] = show_date_scores[name].get(date, 0)
+        for name in artist_date_scores:
+            day_scores[("artist", name)] = artist_date_scores[name].get(date, 0)
+        for title in event_date_scores:
+            day_scores[("event", title)] = event_date_scores[title].get(date, 0)
+
+        # Find max across all items this day
+        max_score = max(day_scores.values()) or 1
+
+        # Normalise each item for this day
+        for (kind, name), raw in day_scores.items():
+            norm = round((raw / max_score) * 100, 1)
+            if kind == "show":
+                show_norm_scores[name][date] = (norm, raw)
+            elif kind == "artist":
+                artist_norm_scores[name][date] = (norm, raw)
+            else:
+                event_norm_scores[name][date] = (norm, raw)
+
+    # Insert shows_history
     log.info("  Inserting shows_history...")
     for name, show_id in show_id_map.items():
-        daily = show_scores.get(name, [])
-        if not daily:
+        if name not in show_norm_scores:
             continue
         scores_so_far, rows, prev = [], [], None
-        for d in daily:
-            score = d["normalised"]
-            scores_so_far.append(score)
+        for date in all_dates:
+            if date not in show_norm_scores[name]:
+                continue
+            norm, raw = show_norm_scores[name][date]
+            scores_so_far.append(norm)
             rows.append({
                 "show_id":      show_id,
-                "score":        score,
-                "trends_score": round(d["score"], 1),
-                "status":       score_to_status(score, prev),
-                "trend":        score_to_trend(score, prev),
+                "score":        norm,
+                "trends_score": round(raw, 1),
+                "status":       score_to_status(norm, prev),
+                "trend":        score_to_trend(norm, prev),
                 "sparkline":    build_sparkline(scores_so_far),
                 "search_volume":0,
-                "recorded_at":  d["date"].isoformat(),
+                "recorded_at":  datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc).isoformat(),
             })
-            prev = score
-        sb.table("shows_history").insert(rows).execute()
-        log.info(f"    {name}: {len(rows)} history rows")
+            prev = norm
+        if rows:
+            sb.table("shows_history").insert(rows).execute()
+            log.info(f"    {name}: {len(rows)} history rows")
 
-    # Artists history
+    # Insert artists_history
     log.info("  Inserting artists_history...")
     for name, artist_id in artist_id_map.items():
-        daily = artist_scores.get(name, [])
-        if not daily:
+        if name not in artist_norm_scores:
             continue
         scores_so_far, rows, prev = [], [], None
-        for d in daily:
-            score = d["normalised"]
-            scores_so_far.append(score)
+        for date in all_dates:
+            if date not in artist_norm_scores[name]:
+                continue
+            norm, raw = artist_norm_scores[name][date]
+            scores_so_far.append(norm)
             rows.append({
                 "artist_id":    artist_id,
-                "score":        score,
-                "trends_score": round(d["score"], 1),
-                "status":       score_to_status(score, prev),
-                "trend":        score_to_trend(score, prev),
+                "score":        norm,
+                "trends_score": round(raw, 1),
+                "status":       score_to_status(norm, prev),
+                "trend":        score_to_trend(norm, prev),
                 "sparkline":    build_sparkline(scores_so_far),
                 "search_volume":0,
-                "recorded_at":  d["date"].isoformat(),
+                "recorded_at":  datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc).isoformat(),
             })
-            prev = score
-        sb.table("artists_history").insert(rows).execute()
-        log.info(f"    {name}: {len(rows)} history rows")
+            prev = norm
+        if rows:
+            sb.table("artists_history").insert(rows).execute()
+            log.info(f"    {name}: {len(rows)} history rows")
 
-    # Events history
+    # Insert events_history
     log.info("  Inserting events_history...")
     for title, event_id in event_id_map.items():
-        daily = event_scores.get(title, [])
-        if not daily:
+        if title not in event_norm_scores:
             continue
         scores_so_far, rows, prev = [], [], None
-        for d in daily:
-            score = d["normalised"]
-            scores_so_far.append(score)
+        for date in all_dates:
+            if date not in event_norm_scores[title]:
+                continue
+            norm, raw = event_norm_scores[title][date]
+            scores_so_far.append(norm)
             rows.append({
                 "event_id":     event_id,
-                "score":        score,
-                "trends_score": round(d["score"], 1),
+                "score":        norm,
+                "trends_score": round(raw, 1),
                 "status":       "Upcoming",
-                "trend":        score_to_trend(score, prev),
+                "trend":        score_to_trend(norm, prev),
                 "sparkline":    build_sparkline(scores_so_far),
                 "search_volume":0,
-                "recorded_at":  d["date"].isoformat(),
+                "recorded_at":  datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc).isoformat(),
             })
-            prev = score
-        sb.table("events_history").insert(rows).execute()
-        log.info(f"    {title[:40]}: {len(rows)} history rows")
+            prev = norm
+        if rows:
+            sb.table("events_history").insert(rows).execute()
+            log.info(f"    {title[:40]}: {len(rows)} history rows")
 
     # ── DONE ──────────────────────────────────────────────────────────────
     log.info("=== INIT complete ===")
@@ -954,7 +1047,7 @@ def main():
     log.info(f"  Artists: {len(artist_id_map)}")
     log.info(f"  Events:  {len(event_id_map)}")
     log.info(f"  Top 5 genres: {top5}")
-    log.info("  Database bootstrapped with real Google Trends data from 1st May")
+    log.info("  Database bootstrapped with real Google Trends data from 1st January")
 
 
 if __name__ == "__main__":
