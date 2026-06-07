@@ -537,36 +537,10 @@ def main():
         sb.table("events_history").insert(event_rows).execute()
         log.info(f"  Inserted {len(event_rows)} event history rows")
 
-    # ── STEP 4: Re-rank genres ────────────────────────────────────────────
-    log.info("--- Step 4: Re-ranking genres ---")
-
-    # Aggregate scores by genre from today's show scores
-    genre_totals = {}
-    for s in shows:
-        res = sb.table("shows_master").select("genre_id").eq("id",s["id"]).execute()
-        if res.data:
-            gid = res.data[0].get("genre_id")
-            score = show_norm.get(s["name"], 0)
-            if gid:
-                genre_totals[gid] = genre_totals.get(gid, 0) + score
-
-    sorted_genres = sorted(genre_totals.items(), key=lambda x: x[1], reverse=True)
-    top5_ids = [g[0] for g in sorted_genres[:5]]
-
-    for i, (gid, total) in enumerate(sorted_genres):
-        is_top5 = i < 5
-        rank    = i + 1 if is_top5 else 99
-        colors  = GENRE_COLORS[i] if i < 5 else GENRE_COLORS[5]
-        sb.table("genres").update({
-            "is_top5":    is_top5,
-            "rank":       rank,
-            "dot_color":  colors["dot_color"],
-            "bg_color":   colors["bg_color"],
-            "text_color": colors["text_color"],
-            "updated_at": now_utc(),
-        }).eq("id", gid).execute()
-
-    log.info(f"  Top 5 genre IDs: {top5_ids}")
+    # ── STEP 4: Genre ranking — fixed, no re-ranking ─────────────────────
+    # Genres are fixed from scraper_init — not re-ranked daily
+    # To change genre rankings, update manually in Supabase
+    log.info("--- Step 4: Genre ranking fixed — skipping re-rank ---")
 
     # ── STEP 5: has_description retry via Wikipedia ───────────────────────
     log.info("--- Step 5: Filling missing descriptions ---")
