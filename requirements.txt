@@ -1,5 +1,0 @@
-pytrends
-feedparser
-supabase
-python-dotenv
-requests
