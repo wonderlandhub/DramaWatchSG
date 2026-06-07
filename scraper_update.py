@@ -247,20 +247,22 @@ def fetch_related_queries(pytrends, term: str) -> list:
 
 def fetch_yesterday_score(pytrends, term: str) -> float:
     """
-    Fetch Google Trends score for a term in SG.
-    Uses now 7-d timeframe — more reliable than today 1-d.
-    Returns average of last 7 days as the current score.
+    Fetch yesterday's complete daily Google Trends score for a term in SG.
+    Uses today 1-m (30 daily points) — consistent with scraper_init.
+    Takes iloc[-2] = yesterday's full day score.
+    iloc[-1] = today which is incomplete at midnight run time.
     """
     try:
-        pytrends.build_payload([term], geo="SG", timeframe="now 7-d")
+        pytrends.build_payload([term], geo="SG", timeframe="today 1-m")
         df = pytrends.interest_over_time()
         if df.empty or term not in df.columns: return 0.0
-        return float(df[term].mean())
+        if len(df) < 2: return float(df[term].iloc[-1])
+        return float(df[term].iloc[-2])  # yesterday's complete daily score
     except Exception as e:
         log.warning(f"Score error '{term}': {e}"); return 0.0
 
 def normalise(scores: dict) -> dict:
-    """Normalise {name: raw_score} to 0-100."""
+    """Normalise {name: raw_score} to 0-100 within the set."""
     if not scores: return scores
     mx = max(scores.values()) or 1
     return {k: round((v/mx)*100, 1) for k,v in scores.items()}
@@ -443,10 +445,18 @@ def main():
         log.info(f"    {e['title'][:40]}: {event_raw[e['title']]:.1f}")
         time.sleep(TRENDS_DELAY)
 
-    # Normalise to 0-100
-    show_norm   = normalise(show_raw)
-    artist_norm = normalise(artist_raw)
-    event_norm  = normalise(event_raw)
+    # Normalise across ALL items together — same as init scraper
+    # Find max score across shows + artists + events combined
+    all_raw = {**show_raw, **artist_raw, **event_raw}
+    max_score = max(all_raw.values()) if all_raw else 1
+    if max_score == 0: max_score = 1
+
+    def normalise_all(scores: dict) -> dict:
+        return {k: round((v / max_score) * 100, 1) for k, v in scores.items()}
+
+    show_norm   = normalise_all(show_raw)
+    artist_norm = normalise_all(artist_raw)
+    event_norm  = normalise_all(event_raw)
 
     # Get previous scores for trend + sparkline
     show_prev   = get_prev_scores(sb, "shows_scores",   "id")
@@ -455,7 +465,14 @@ def main():
 
     # ── STEP 3: Append history rows ───────────────────────────────────────
     log.info("--- Step 3: Appending history rows ---")
-    recorded_at = now_utc()
+    # Store as yesterday SGT date at noon UTC
+    # Midnight SGT run on 8th Jun scores 7th Jun's full day → stored as 7th Jun
+    sgt = timezone(timedelta(hours=8))
+    yesterday_sgt = (datetime.now(sgt) - timedelta(days=1)).date()
+    recorded_at = datetime(
+        yesterday_sgt.year, yesterday_sgt.month, yesterday_sgt.day,
+        4, 0, 0, tzinfo=timezone.utc  # noon SGT = 04:00 UTC
+    ).isoformat()
 
     # Shows
     show_rows = []
