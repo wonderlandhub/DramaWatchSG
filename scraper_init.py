@@ -1029,7 +1029,7 @@ def main():
     # ── PHASE 2: Fetch scores for seed artists ────────────────────────────
     log.info("--- Phase 2: Fetching Google Trends scores for seed artists ---")
     for a in SEED_ARTISTS:
-        daily = fetch_daily_scores(pytrends, a["search_term"], a["name"])
+        daily = fetch_daily_scores(pytrends, a.get("search_term", a["name"]), a["name"])
         if daily:
             artist_scores[a["name"]] = daily
         time.sleep(TRENDS_DELAY)
@@ -1200,7 +1200,7 @@ def main():
             "role":           tmdb.get("role", "Actor"),
             "show_name":      a["show"],
             "genre_id":       genre_id,
-            "search_term":    a["search_term"],
+            "search_term":    a.get("search_term", a["name"]),
             "tmdb_id":        tmdb.get("tmdb_id"),
             "has_description": bool(tmdb.get("role") and a["show"]),
             "is_active":      True,
