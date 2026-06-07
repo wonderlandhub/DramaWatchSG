@@ -391,7 +391,8 @@ function renderKPI() {
   data.forEach(r=>{genreTotals[r.genre]=(genreTotals[r.genre]||0)+getScore(r);});
   const topG = Object.entries(genreTotals).sort((a,b)=>b[1]-a[1])[0];
   const topGLabel = topG ? (GENRES.find(g=>g.code===topG[0])?.label||topG[0]) : '–';
-  const totalVol = data.reduce((a,r)=>a+(Number(r[VOL_FIELD[period]])||0),0);
+  // Sum all scores for the period — always meaningful
+  const totalScore = data.reduce((a,r)=>a+(Number(r[SCORE_FIELD[period]])||0),0);
   const topName = mainTab==='events' ? (top.title||'–') : (top.name||'–');
 
   const labels = {
@@ -402,7 +403,7 @@ function renderKPI() {
   const [l1,l2] = labels[mainTab];
 
   document.getElementById('kpi-row').innerHTML=`
-    <div class="kpi"><div class="kpi-label">Total searches</div><div class="kpi-val">${fmtVol(totalVol)||'–'}</div><div class="kpi-sub kpi-up">${periodLabel()}</div></div>
+    <div class="kpi"><div class="kpi-label">Total score</div><div class="kpi-val">${totalScore>0?Math.round(totalScore):'–'}</div><div class="kpi-sub kpi-up">${periodLabel()}</div></div>
     <div class="kpi"><div class="kpi-label">${l1}</div><div class="kpi-val" style="font-size:14px;padding-top:3px;">${topGLabel}</div><div class="kpi-sub">${topG?Math.round(topG[1]):0} total score</div></div>
     <div class="kpi"><div class="kpi-label">${l2}</div><div class="kpi-val" style="font-size:13px;padding-top:4px;">${topName}</div><div class="kpi-sub">Score ${Math.round(getScore(top))}</div></div>
     <div class="kpi"><div class="kpi-label">Genres tracked</div><div class="kpi-val">${GENRES.filter(g=>g.is_top5).length+1}</div><div class="kpi-sub">Top 5 + Others</div></div>`;
