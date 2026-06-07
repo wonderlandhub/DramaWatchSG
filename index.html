@@ -188,6 +188,7 @@ a{text-decoration:none;}
 <section class="hero">
   <h1>Trending drama searches<br>in Singapore</h1>
   <p>Real Google Trends data from Singapore — which shows, artists and events SG is searching right now. Updated daily at midnight SGT.</p>
+  <p style="font-size:12px;color:var(--t3);margin-top:6px;line-height:1.6;">Scores are relative popularity indexes (0–100) from Google Trends SG — 100 means peak search interest, not absolute search counts. Higher score = more SG people searching for it right now.</p>
 </section>
 
 <nav class="main-nav">
@@ -214,7 +215,7 @@ a{text-decoration:none;}
     <div class="rank-list" id="rank-list"></div>
   </div>
   <div class="s2-card">
-    <div class="sec-lbl">Search trend <span class="ptag" id="chart-ptag">Today</span></div>
+    <div class="sec-lbl">Search index trend <span class="ptag" id="chart-ptag">Today</span></div>
     <div class="chart-legend" id="chart-legend"></div>
     <div style="position:relative;width:100%;height:150px;"><canvas id="trendChart"></canvas></div>
   </div>
@@ -376,10 +377,12 @@ function periodLabel() {
 // ── DATA FOR CURRENT TAB ──────────────────────────────────────────────────
 function currentData() {
   const all = mainTab==='shows'?SHOWS : mainTab==='artists'?ARTISTS : EVENTS;
+  // Filter out items with 0 score for the current period
+  const active = all.filter(r=>getScore(r)>0);
   const genre = subTab[mainTab];
-  if(genre==='all') return [...all].sort((a,b)=>getScore(b)-getScore(a));
-  if(genre==='others') return all.filter(r=>!GENRES.some(g=>g.is_top5&&g.code===r.genre)).sort((a,b)=>getScore(b)-getScore(a));
-  return all.filter(r=>r.genre===genre).sort((a,b)=>getScore(b)-getScore(a));
+  if(genre==='all') return [...active].sort((a,b)=>getScore(b)-getScore(a));
+  if(genre==='others') return active.filter(r=>!GENRES.some(g=>g.is_top5&&g.code===r.genre)).sort((a,b)=>getScore(b)-getScore(a));
+  return active.filter(r=>r.genre===genre).sort((a,b)=>getScore(b)-getScore(a));
 }
 
 // ── RENDER KPI ────────────────────────────────────────────────────────────
@@ -403,7 +406,7 @@ function renderKPI() {
   const [l1,l2] = labels[mainTab];
 
   document.getElementById('kpi-row').innerHTML=`
-    <div class="kpi"><div class="kpi-label">Total score</div><div class="kpi-val">${totalScore>0?Math.round(totalScore):'–'}</div><div class="kpi-sub kpi-up">${periodLabel()}</div></div>
+    <div class="kpi" title="Google Trends relative popularity index — 100 = peak search interest in SG. Not absolute search counts."><div class="kpi-label">Search index <span style="font-size:10px;cursor:help;" title="Relative popularity score from Google Trends SG. 100 = peak interest. Not absolute search counts.">ⓘ</span></div><div class="kpi-val">${totalScore>0?Math.round(totalScore):'–'}</div><div class="kpi-sub kpi-up">${periodLabel()}</div></div>
     <div class="kpi"><div class="kpi-label">${l1}</div><div class="kpi-val" style="font-size:14px;padding-top:3px;">${topGLabel}</div><div class="kpi-sub">${topG?Math.round(topG[1]):0} total score</div></div>
     <div class="kpi"><div class="kpi-label">${l2}</div><div class="kpi-val" style="font-size:13px;padding-top:4px;">${topName}</div><div class="kpi-sub">Score ${Math.round(getScore(top))}</div></div>
     <div class="kpi"><div class="kpi-label">Genres tracked</div><div class="kpi-val">${GENRES.filter(g=>g.is_top5).length+1}</div><div class="kpi-sub">Top 5 + Others</div></div>`;
@@ -554,8 +557,7 @@ function renderShows() {
       <div class="item-right">
         <div class="score-num">${score}</div>
         <div class="score-lbl">score</div>
-        <div class="vol-num">${getVol(s)}</div>
-        <div class="vol-lbl">searches</div>
+
         ${sparkHtml(s.sparkline, gs.bc)}
         <span class="sbadge" style="${statusStyle(status)}">${status}</span>
         ${trendLbl(trend)}
@@ -595,8 +597,7 @@ function renderEvents() {
       <div class="item-right">
         <div class="score-num">${score}</div>
         <div class="score-lbl">buzz</div>
-        <div class="vol-num">${getVol(e)}</div>
-        <div class="vol-lbl">searches</div>
+
         ${sparkHtml(e.sparkline, gs.bc)}
         <span class="sbadge" style="${statusStyle(status)}">${status}</span>
         ${trendLbl(trend)}
@@ -622,14 +623,14 @@ function renderArtists() {
       <div class="avatar" style="${gs.av}">${initials}</div>
       <div class="artist-body">
         <div class="artist-name">${a.name||'–'}</div>
-        <div class="artist-sub">${a.role||'Actor'} · <span style="color:${gs.bc};font-size:10px;">${gs.label}</span></div>
+        <div class="artist-sub">${a.role||'Actor'}</div>
+        <div class="item-meta" style="margin-top:3px;"><span class="cat-pill" style="${gs.gps}">${gs.label}</span></div>
         ${a.show_name?`<div class="artist-show">${a.show_name}</div>`:''}
       </div>
       <div class="item-right" style="width:76px;">
         <div class="score-num">${score}</div>
         <div class="score-lbl">score</div>
-        <div class="vol-num">${getVol(a)}</div>
-        <div class="vol-lbl">searches</div>
+
         ${sparkHtml(a.sparkline, gs.bc)}
         ${trendLbl(trend)}
       </div>
