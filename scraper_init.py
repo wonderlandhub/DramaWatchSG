@@ -96,56 +96,56 @@ SEED_SHOWS = [
         "name":        "Perfect Crown",
         "genre":       "kdrama",
         "context":     "Byeon Woo-seok and IU — most anticipated K-Drama of 2026 in SG",
-        "search_term": "Perfect Crown Korean drama 2026",
-        "tmdb_id":     None,  # search by name
+        "search_term": "Perfect Crown",
+        "tmdb_id":     None,
     },
     {
-        "name":        "Tempest",
+        "name":        "Tempest Korean Drama",
         "genre":       "kdrama",
         "context":     "Gianna Jun political thriller — SG fans waiting eagerly",
-        "search_term": "Tempest Korean drama 2026 Gianna Jun",
+        "search_term": "Tempest",
         "tmdb_id":     None,
     },
     {
         "name":        "My Royal Nemesis",
         "genre":       "kdrama",
         "context":     "Time-travel enemies-to-lovers — trending on Netflix SG",
-        "search_term": "My Royal Nemesis Korean drama Netflix 2026",
+        "search_term": "My Royal Nemesis",
         "tmdb_id":     None,
     },
     {
         "name":        "The Remarried Empress",
         "genre":       "kdrama",
         "context":     "Shin Min-A fantasy romance — highly anticipated in SG",
-        "search_term": "The Remarried Empress Korean drama 2026",
+        "search_term": "The Remarried Empress",
         "tmdb_id":     None,
     },
     {
         "name":        "Bloodhounds Season 2",
         "genre":       "kdrama",
         "context":     "Action sequel — SG fans of Season 1 waiting",
-        "search_term": "Bloodhounds Season 2 Korean drama Disney Plus",
+        "search_term": "Bloodhounds Season 2",
         "tmdb_id":     None,
     },
     {
         "name":        "Bad Guys Reign of Chaos",
         "genre":       "kdrama",
         "context":     "Crime action — Ma Dong-Seok on Viu SG",
-        "search_term": "Bad Guys Reign of Chaos Korean drama Viu 2026",
+        "search_term": "Bad Guys Reign of Chaos",
         "tmdb_id":     None,
     },
     {
         "name":        "Karma Korean Drama",
         "genre":       "kdrama",
         "context":     "Slow-burn thriller — Park Hae-soo gaining SG traction",
-        "search_term": "Karma Korean drama 2026 Park Hae-soo",
+        "search_term": "Karma",
         "tmdb_id":     None,
     },
     {
         "name":        "Queen of Tears",
         "genre":       "kdrama",
         "context":     "2024 classic — still heavily rewatched by SG fans",
-        "search_term": "Queen of Tears Korean drama Netflix",
+        "search_term": "Queen of Tears",
         "tmdb_id":     202431,
     },
 
@@ -154,102 +154,102 @@ SEED_SHOWS = [
         "name":        "How Dare You",
         "genre":       "cdrama",
         "context":     "Transmigration comedy — dominating SG C-Drama discussions",
-        "search_term": "How Dare You Chinese drama 2026",
+        "search_term": "How Dare You",
         "tmdb_id":     None,
     },
     {
         "name":        "My Page in the 90s",
         "genre":       "cdrama",
         "context":     "Chen Xingxu time-travel romance — SG fans loving the 90s nostalgia",
-        "search_term": "My Page in the 90s Chinese drama 2026",
+        "search_term": "My Page in the 90s",
         "tmdb_id":     None,
     },
     {
         "name":        "Shine on Me",
         "genre":       "cdrama",
         "context":     "Song Weilong and Zhao Jinmai youth romance on Netflix SG",
-        "search_term": "Shine on Me Chinese drama Netflix 2026",
+        "search_term": "Shine on Me",
         "tmdb_id":     None,
     },
     {
         "name":        "The Story of Rose",
         "genre":       "cdrama",
         "context":     "2024 classic — still actively discussed in SG",
-        "search_term": "The Story of Rose Chinese drama WeTV",
+        "search_term": "The Story of Rose",
         "tmdb_id":     None,
     },
     {
         "name":        "Nirvana in Fire",
         "genre":       "cdrama",
         "context":     "Timeless C-Drama classic — steady SG rewatch community",
-        "search_term": "Nirvana in Fire Chinese drama iQIYI",
+        "search_term": "Nirvana in Fire",
         "tmdb_id":     None,
     },
     {
         "name":        "Blossoms Shanghai",
         "genre":       "cdrama",
         "context":     "Wong Kar-wai masterpiece — SG fans still recommending",
-        "search_term": "Blossoms Shanghai Chinese drama 繁花",
+        "search_term": "Blossoms Shanghai",
         "tmdb_id":     None,
     },
 
     # ── LOCAL SG ─────────────────────────────────────────────────────────
     {
-        "name":        "Emerald Hill The Little Nyonya Story",
+        "name":        "Emerald Hill",
         "genre":       "local",
         "context":     "Star Awards 2026 biggest winner — 6 awards including Best Drama",
-        "search_term": "Emerald Hill Little Nyonya Story Channel 8 2026",
+        "search_term": "Emerald Hill",
         "tmdb_id":     None,
     },
     {
-        "name":        "Pure Vanilla",
+        "name":        "Pure Vanilla Singapore",
         "genre":       "local",
         "context":     "New 2026 SG drama — gaining local viewership",
-        "search_term": "Pure Vanilla Singapore drama Mediacorp 2026",
+        "search_term": "Pure Vanilla",
         "tmdb_id":     None,
     },
     {
-        "name":        "People Like Us",
+        "name":        "People Like Us Singapore",
         "genre":       "local",
         "context":     "SG community drama — relatable local stories",
-        "search_term": "People Like Us Singapore drama 2026",
+        "search_term": "People Like Us",
         "tmdb_id":     None,
     },
     {
         "name":        "128 Circle",
         "genre":       "local",
         "context":     "Singapore first multilingual drama — hawker centre stories",
-        "search_term": "128 Circle Singapore multilingual drama",
+        "search_term": "128 Circle",
         "tmdb_id":     None,
     },
 
     # ── THAI ─────────────────────────────────────────────────────────────
     {
-        "name":        "Hometown Romance",
+        "name":        "Hometown Romance Thai",
         "genre":       "thai",
         "context":     "Thai countryside rom-com — SG BL fans following",
-        "search_term": "Hometown Romance Thai drama 2026",
+        "search_term": "Hometown Romance",
         "tmdb_id":     None,
     },
     {
         "name":        "Moonshadow Thai Drama",
         "genre":       "thai",
         "context":     "Thai BL sequel — Emi and Bonnie returning",
-        "search_term": "Moonshadow Thai drama 2026 BL",
+        "search_term": "Moonshadow",
         "tmdb_id":     None,
     },
     {
         "name":        "Only Friends",
         "genre":       "thai",
         "context":     "GMMTV BL — still active SG fan community",
-        "search_term": "Only Friends Thai drama GMMTV",
+        "search_term": "Only Friends",
         "tmdb_id":     None,
     },
     {
-        "name":        "Hidden Agenda Thai Drama",
+        "name":        "Hidden Agenda",
         "genre":       "thai",
         "context":     "Thai BL — word-of-mouth growing in SG",
-        "search_term": "Hidden Agenda Thai drama GMMTV 2024",
+        "search_term": "Hidden Agenda",
         "tmdb_id":     None,
     },
 
@@ -258,21 +258,21 @@ SEED_SHOWS = [
         "name":        "Bridgerton Season 4",
         "genre":       "western",
         "context":     "Benedict Bridgerton arc — SG fans eagerly waiting",
-        "search_term": "Bridgerton Season 4 Netflix 2026",
+        "search_term": "Bridgerton Season 4",
         "tmdb_id":     92783,
     },
     {
         "name":        "Suits LA",
         "genre":       "western",
         "context":     "Suits spinoff — SG legal drama fans following",
-        "search_term": "Suits LA Netflix 2026",
+        "search_term": "Suits LA",
         "tmdb_id":     None,
     },
     {
         "name":        "The White Lotus Season 3",
         "genre":       "western",
         "context":     "Thailand setting — SG viewers very engaged",
-        "search_term": "White Lotus Season 3 HBO 2025",
+        "search_term": "The White Lotus",
         "tmdb_id":     None,
     },
 
@@ -281,21 +281,21 @@ SEED_SHOWS = [
         "name":        "Dirilis Ertugrul",
         "genre":       "others",
         "context":     "Turkish epic — loyal SG Malay community still active",
-        "search_term": "Dirilis Ertugrul Turkish drama Netflix",
+        "search_term": "Dirilis Ertugrul",
         "tmdb_id":     None,
     },
     {
         "name":        "Scam 1992",
         "genre":       "others",
         "context":     "Indian drama — SG viewers calling it essential viewing",
-        "search_term": "Scam 1992 Indian drama ZEE5",
+        "search_term": "Scam 1992",
         "tmdb_id":     None,
     },
     {
         "name":        "Oshin",
         "genre":       "others",
         "context":     "J-Drama classic — nostalgia wave among older SG viewers",
-        "search_term": "Oshin Japanese drama NHK",
+        "search_term": "Oshin",
         "tmdb_id":     None,
     },
 ]
@@ -347,7 +347,7 @@ SEED_EVENTS = [
         "venue":       "MES Theatre Mediacorp",
         "event_date":  "Apr 19 2026",
         "description": "Annual Star Awards ceremony celebrating excellence in Singapore TV drama. Emerald Hill won 6 awards including Best Drama.",
-        "search_term": "Star Awards 2026 Singapore",
+        "search_term": "Star Awards 2026",
         "links":       [{"l":"Mediacorp","u":"https://www.mediacorp.sg"}],
     },
     {
@@ -357,7 +357,7 @@ SEED_EVENTS = [
         "venue":       "Singapore",
         "event_date":  "2026",
         "description": "K-Drama fan meet events in Singapore 2026 — cast appearances and fan gatherings.",
-        "search_term": "K-Drama fan meet Singapore 2026",
+        "search_term": "K-Drama fan meet Singapore",
         "links":       [{"l":"SISTIC","u":"https://www.sistic.com.sg"}],
     },
     {
@@ -367,7 +367,7 @@ SEED_EVENTS = [
         "venue":       "Singapore",
         "event_date":  "2026",
         "description": "Netflix drama activations and pop-up events in Singapore 2026.",
-        "search_term": "Netflix drama event Singapore 2026",
+        "search_term": "Netflix drama Singapore",
         "links":       [{"l":"Netflix SG","u":"https://www.netflix.com/sg"}],
     },
     {
@@ -377,7 +377,7 @@ SEED_EVENTS = [
         "venue":       "Singapore",
         "event_date":  "2026",
         "description": "GMMTV Thai drama fan events and gatherings in Singapore 2026.",
-        "search_term": "GMMTV fan event Singapore 2026",
+        "search_term": "GMMTV Singapore",
         "links":       [{"l":"GMMTV","u":"https://www.youtube.com/@GMMTV"}],
     },
 ]
@@ -682,6 +682,13 @@ def main():
 
     # ── PHASE 4: Genre ranking from real scores ───────────────────────────
     log.info("--- Phase 4: Ranking genres from real search scores ---")
+
+    # Ensure all seed genres are represented even if no Trends data
+    all_seed_genres = list(dict.fromkeys(s["genre"] for s in SEED_SHOWS))
+    for g in all_seed_genres:
+        if g not in genre_totals:
+            genre_totals[g] = 0  # zero score — will build over time
+
     sorted_genres = sorted(genre_totals.items(), key=lambda x: x[1], reverse=True)
     top5 = [g[0] for g in sorted_genres[:5]]
     log.info(f"  Top 5 genres by SG search volume: {top5}")
@@ -726,9 +733,11 @@ def main():
     show_id_map = {}  # name → id
 
     for s in SEED_SHOWS:
-        if s["name"] not in show_scores:
-            log.warning(f"  Skipping {s['name']} — no Trends data")
-            continue
+        # Insert all seed shows regardless of Trends data
+        # Shows with no Trends data get score=0 until daily update picks them up
+        has_trends = s["name"] in show_scores
+        if not has_trends:
+            log.warning(f"  No Trends data for {s['name']} — inserting with score=0")
 
         # TMDB lookup
         tmdb = tmdb_search_show(s["name"], s.get("tmdb_id"))
@@ -805,9 +814,10 @@ def main():
     artist_id_map = {}
 
     for a in SEED_ARTISTS:
-        if a["name"] not in artist_scores:
-            log.warning(f"  Skipping {a['name']} — no Trends data")
-            continue
+        # Insert all seed artists regardless of Trends data
+        has_trends = a["name"] in artist_scores
+        if not has_trends:
+            log.warning(f"  No Trends data for {a['name']} — inserting with score=0")
 
         tmdb = tmdb_search_person(a["name"])
         genre_id = genre_map.get(a["genre"]) or genre_map.get("others")
