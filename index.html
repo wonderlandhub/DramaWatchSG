@@ -18,7 +18,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font);background:var(--bg);color:var(--t1);font-size:14px;line-height:1.5;}
 a{text-decoration:none;}
-.page{max-width:900px;margin:0 auto;padding:0 24px 64px;}
+.page{max-width:1200px;margin:0 auto;padding:0 32px 64px;}
 
 /* HEADER */
 .site-header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 16px;border-bottom:1px solid var(--border);}
@@ -33,7 +33,7 @@ a{text-decoration:none;}
 /* HERO */
 .hero{padding:24px 0 20px;border-bottom:1px solid var(--border);}
 .hero h1{font-size:22px;font-weight:500;letter-spacing:-0.3px;margin-bottom:6px;line-height:1.3;}
-.hero p{font-size:13px;color:var(--t2);line-height:1.7;max-width:520px;}
+.hero p{font-size:13px;color:var(--t2);line-height:1.7;}
 
 /* MAIN NAV */
 .main-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0 0;margin-bottom:16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
@@ -51,7 +51,7 @@ a{text-decoration:none;}
 .ppill.on{background:#1A1A18;color:#fff;border-color:#1A1A18;font-weight:500;}
 
 /* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
 .kpi{background:var(--surface2);border-radius:var(--r);padding:14px;}
 .kpi-label{font-size:11px;color:var(--t2);margin-bottom:4px;}
 .kpi-val{font-size:18px;font-weight:500;color:var(--t1);letter-spacing:-0.4px;}
@@ -59,7 +59,7 @@ a{text-decoration:none;}
 .kpi-up{color:#0F6E56!important;}
 
 /* S2 */
-.s2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.s2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 .s2-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px;}
 .sec-lbl{font-size:11px;font-weight:500;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
 .ptag{font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;padding:2px 8px;border-radius:8px;background:var(--surface2);color:var(--t3);}
@@ -157,7 +157,7 @@ a{text-decoration:none;}
 #page-state{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:var(--font);}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-@media(max-width:640px){
+@media(max-width:768px){
   .page{padding:0 16px 48px;}
   .kpi-row{grid-template-columns:repeat(2,1fr);}
   .s2{grid-template-columns:1fr;}
@@ -221,17 +221,6 @@ a{text-decoration:none;}
   </div>
 </div>
 
-<!-- Biggest Movers Section -->
-<div id="movers-section" style="margin-bottom:16px;">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;">
-    <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:12px;font-weight:500;color:var(--t1);">Biggest movers <span style="font-size:11px;font-weight:400;color:var(--t3);" id="movers-period">· This week</span></span>
-      <span style="font-size:11px;color:var(--t3);">vs previous period</span>
-    </div>
-    <div id="movers-list" style="padding:0 20px;"></div>
-  </div>
-</div>
-
 <div class="s3">
   <div class="s3-header">
     <div class="s3-top">
@@ -239,6 +228,8 @@ a{text-decoration:none;}
       <div class="genre-tabs" id="genre-tabs"></div>
     </div>
   </div>
+  <!-- Biggest Movers strip — compact, inside s3 card -->
+  <div id="movers-strip" style="border-bottom:1px solid var(--border);padding:10px 20px;background:var(--surface2);display:none;"></div>
   <div id="panel"></div>
 </div>
 
@@ -463,23 +454,48 @@ function renderChart() {
   const topGenres = GENRES.filter(g=>g.is_top5).slice(0,3);
   if(!topGenres.length) return;
 
-  // Build daily score timeline from sparklines
-  const labels = ['7d ago','6d ago','5d ago','4d ago','3d ago','2d ago','Yesterday'];
+  // Chart points differ per period — showing score evolution over time
+  const periodPoints = {
+    today: [
+      {label:'3 months ago', field:'score_3m'},
+      {label:'30 days ago',  field:'score_30d'},
+      {label:'7 days ago',   field:'score_7d'},
+      {label:'Today',        field:'score_today'},
+    ],
+    '7d': [
+      {label:'3 months ago', field:'score_3m'},
+      {label:'30 days ago',  field:'score_30d'},
+      {label:'Last 7 days',  field:'score_7d'},
+    ],
+    '30d': [
+      {label:'3 months ago', field:'score_3m'},
+      {label:'Last 30 days', field:'score_30d'},
+    ],
+    '3m': [
+      {label:'Last 30 days', field:'score_30d'},
+      {label:'Last 3 months',field:'score_3m'},
+    ],
+  };
+
+  const points = periodPoints[period] || periodPoints['today'];
+  const labels = points.map(p=>p.label);
+
   const datasets = topGenres.map(g=>{
-    const items = data.filter(r=>r.genre===g.code);
-    // Average sparkline per genre
-    const avgSpark = labels.map((_,i)=>{
-      const vals = items.map(r=>(r.sparkline||[])[i]||0).filter(v=>v>0);
-      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    const items = data.filter(r=>r.genre===g.code && getScore(r)>0);
+    // Average score per period point across all items in this genre
+    const chartData = points.map(p=>{
+      const vals = items.map(r=>Number(r[p.field]||0)).filter(v=>v>0);
+      return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
     });
     return {
-      label: g.label,
-      data: avgSpark,
+      label:       g.label,
+      data:        chartData,
       borderColor: g.dot_color,
       borderWidth: 2,
-      pointRadius: 2,
-      fill: false,
-      tension: 0.4,
+      pointRadius: 3,
+      pointBackgroundColor: g.dot_color,
+      fill:        false,
+      tension:     0.4,
     };
   });
 
@@ -489,11 +505,20 @@ function renderChart() {
 
   chartInst = new Chart(document.getElementById('trendChart'),{
     type:'line', data:{labels,datasets},
-    options:{responsive:true,maintainAspectRatio:false,
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
-        x:{grid:{display:false},ticks:{font:{size:10},color:'#9C9C96'}},
-        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#9C9C96',callback:v=>Math.round(v)}},
+        x:{
+          grid:{display:false},
+          ticks:{font:{size:10},color:'#9C9C96'}
+        },
+        y:{
+          grid:{color:'rgba(0,0,0,0.04)'},
+          ticks:{font:{size:10},color:'#9C9C96',callback:v=>Math.round(v)},
+          min:0,
+        },
       }
     }
   });
@@ -665,35 +690,30 @@ function renderArtists() {
 
 // ── UPDATE ALL ────────────────────────────────────────────────────────────
 function renderMovers() {
-  // Only show for shows and artists tabs
-  const moversSection = document.getElementById('movers-section');
+  const strip = document.getElementById('movers-strip');
+
+  // Hide for events tab
   if(mainTab === 'events') {
-    moversSection.style.display = 'none';
+    strip.style.display = 'none';
     return;
   }
-  moversSection.style.display = 'block';
 
-  const data = mainTab === 'shows' ? SHOWS : ARTISTS;
+  // Use currentData() so it respects genre tab filter
+  const data = currentData();
+  if(!data.length) {
+    strip.style.display = 'none';
+    return;
+  }
 
-  // Compute delta between current period and previous period
+  // Compare current period vs previous period
   const currentField = SCORE_FIELD[period];
   const prevField = {
-    today: 'score_7d',    // compare today vs 7d avg
-    '7d':  'score_30d',   // compare 7d vs 30d avg
-    '30d': 'score_3m',    // compare 30d vs 3m avg
-    '3m':  'score_30d',   // compare 3m vs 30d avg (reversed)
+    today: 'score_7d',
+    '7d':  'score_30d',
+    '30d': 'score_3m',
+    '3m':  'score_30d',
   }[period];
 
-  const periodNames = {
-    today: 'Today vs 7-day avg',
-    '7d':  'This week vs last month',
-    '30d': 'This month vs 3 months',
-    '3m':  'Last 3 months vs last month',
-  };
-
-  document.getElementById('movers-period').textContent = `· ${periodNames[period]}`;
-
-  // Calculate delta per item
   const withDelta = data
     .map(r => ({
       ...r,
@@ -701,57 +721,42 @@ function renderMovers() {
       prev:    Number(r[prevField]||0),
       delta:   Number(r[currentField]||0) - Number(r[prevField]||0),
     }))
-    .filter(r => r.current > 0 || r.prev > 0); // at least some activity
+    .filter(r => r.current > 0 || r.prev > 0);
 
-  // Top 3 rising and top 3 falling
-  const rising  = [...withDelta].sort((a,b)=>b.delta-a.delta).slice(0,3).filter(r=>r.delta>0);
-  const falling = [...withDelta].sort((a,b)=>a.delta-b.delta).slice(0,3).filter(r=>r.delta<0);
+  const rising  = [...withDelta].sort((a,b)=>b.delta-a.delta).slice(0,3).filter(r=>r.delta > 2);
+  const falling = [...withDelta].sort((a,b)=>a.delta-b.delta).slice(0,3).filter(r=>r.delta < -2);
 
   if(!rising.length && !falling.length) {
-    moversSection.style.display = 'none';
+    strip.style.display = 'none';
     return;
   }
 
-  const nameField = mainTab === 'shows' ? 'name' : 'name';
+  strip.style.display = 'flex';
+  strip.style.alignItems = 'center';
+  strip.style.gap = '8px';
+  strip.style.flexWrap = 'wrap';
 
-  const moverRow = (item, isRising) => {
-    const gs = getGenreStyle(item.genre);
-    const name = item.name || item.title || '–';
+  // Compact pill per mover
+  const moverPill = (item, isRising) => {
+    const name = (item.name || item.title || '–').split(' ').slice(0,3).join(' ');
     const delta = Math.abs(Math.round(item.delta));
     const arrow = isRising ? '↑' : '↓';
     const color = isRising ? '#0F6E56' : '#A32D2D';
     const bg    = isRising ? '#E8F5F0' : '#FCEBEB';
-    return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <div style="width:28px;height:28px;border-radius:6px;background:${gs.bg};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:${gs.bc};flex-shrink:0;">${item.genre?.substring(0,2).toUpperCase()||'??'}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-          <div style="font-size:11px;color:var(--t3);">${gs.label}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;background:${bg};">
-          <span style="font-size:13px;font-weight:600;color:${color};">${arrow}</span>
-          <span style="font-size:12px;font-weight:500;color:${color};">+${delta}</span>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div style="font-size:16px;font-weight:500;color:var(--t1);">${Math.round(item.current)}</div>
-          <div style="font-size:10px;color:var(--t3);font-family:var(--mono);">score</div>
-        </div>
-      </div>`;
+    const border= isRising ? '#B8E0D4' : '#F5C6C6';
+    return `<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:${bg};border:1px solid ${border};">
+      <span style="font-size:11px;font-weight:600;color:${color};">${arrow}</span>
+      <span style="font-size:11px;font-weight:500;color:var(--t1);">${name}</span>
+      <span style="font-size:10px;color:${color};font-weight:500;">${delta}</span>
+    </div>`;
   };
 
-  let html = '';
-  if(rising.length) {
-    html += `<div style="padding:10px 0 4px;font-size:10px;font-weight:600;color:#0F6E56;text-transform:uppercase;letter-spacing:.06em;">Rising 🔥</div>`;
-    html += rising.map(r=>moverRow(r,true)).join('');
-  }
-  if(falling.length) {
-    html += `<div style="padding:10px 0 4px;font-size:10px;font-weight:600;color:#A32D2D;text-transform:uppercase;letter-spacing:.06em;${rising.length?'margin-top:4px;':''}">Fading</div>`;
-    html += falling.map(r=>moverRow(r,false)).join('');
-  }
+  let html = `<span style="font-size:10px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;">Movers</span>`;
+  if(rising.length) html += rising.map(r=>moverPill(r,true)).join('');
+  if(rising.length && falling.length) html += `<span style="color:var(--border-med);font-size:14px;">|</span>`;
+  if(falling.length) html += falling.map(r=>moverPill(r,false)).join('');
 
-  // Remove last border
-  html = html.replace(/border-bottom:1px solid var\(--border\);">\s*$/, 'border-bottom:none;">');
-  document.getElementById('movers-list').innerHTML = html;
+  strip.innerHTML = html;
 }
 
 function updateAll() {
