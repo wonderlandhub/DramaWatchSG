@@ -460,16 +460,20 @@ async function renderChart() {
   const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
   const periodConfig = {
-    today: { days: 2,  table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
-    '7d':  { days: 7,  table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
-    '30d': { days: 30, table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
-    '3m':  { days: 90, table: 'shows_history',   id: 'show_id',   groupBy: 'day'},
+    today: { days: 1,  groupBy: 'day' },
+    '7d':  { days: 7,  groupBy: 'day' },
+    '30d': { days: 30, groupBy: 'day' },
+    '3m':  { days: 90, groupBy: 'day' },
   };
 
   const cfg = periodConfig[period] || periodConfig['today'];
+
+  // All periods end at today — only start date differs
+  const toDate   = new Date(now);
   const fromDate = new Date(now);
   fromDate.setDate(fromDate.getDate() - cfg.days);
   const fromStr = fmtDate(fromDate);
+  const toStr   = fmtDate(toDate);
 
   // Use shows history for chart — always shows tab data
   const histTable = mainTab === 'artists' ? 'artists_history' : mainTab === 'events' ? 'events_history' : 'shows_history';
@@ -484,7 +488,7 @@ async function renderChart() {
   let histRows = [];
   try {
     const res = await fetch(
-      `${SB_URL}/rest/v1/${histTable}?select=${idField},score,recorded_at&recorded_at=gte.${fromStr}T00:00:00Z&order=recorded_at.asc&limit=20000`,
+      `${SB_URL}/rest/v1/${histTable}?select=${idField},score,recorded_at&recorded_at=gte.${fromStr}T00:00:00Z&recorded_at=lte.${toStr}T23:59:59Z&order=recorded_at.asc&limit=20000`,
       { headers: SB_HEADERS }
     );
     if(res.ok) histRows = await res.json();
@@ -492,6 +496,28 @@ async function renderChart() {
     console.warn('Chart fetch error:', e);
     return;
   }
+
+  // Build period-aware sparklines per item from same fetched data
+  const sparklineMap = {};
+  histRows.forEach(row => {
+    const id = String(row[idField]);
+    const dateKey = getKey(row.recorded_at);
+    if(!sparklineMap[id]) sparklineMap[id] = {};
+    if(!sparklineMap[id][dateKey]) sparklineMap[id][dateKey] = [];
+    sparklineMap[id][dateKey].push(Number(row.score||0));
+  });
+
+  // Convert to sorted daily average array per item
+  window.currentSparklines = {};
+  Object.entries(sparklineMap).forEach(([id, dates]) => {
+    const sorted = Object.entries(dates)
+      .sort(([a],[b]) => a.localeCompare(b))
+      .map(([,scores]) => Math.round(scores.reduce((a,b)=>a+b,0)/scores.length));
+    window.currentSparklines[id] = sorted;
+  });
+
+  // Redraw panel with period-correct sparklines
+  renderPanel();
 
   // Group rows by genre and date
   // For 3m — group by week, else by day
@@ -660,7 +686,7 @@ function renderShows() {
         <div class="score-num">${score}</div>
         <div class="score-lbl">score</div>
 
-        ${sparkHtml(s.sparkline, gs.bc)}
+        ${sparkHtml((window.currentSparklines&&window.currentSparklines[String(s.id)])||s.sparkline, gs.bc)}
         <span class="sbadge" style="${statusStyle(status)}">${status}</span>
         ${trendLbl(trend)}
       </div>
@@ -703,7 +729,7 @@ function renderEvents() {
         <div class="score-num">${score}</div>
         <div class="score-lbl">buzz</div>
 
-        ${sparkHtml(e.sparkline, gs.bc)}
+        ${sparkHtml((window.currentSparklines&&window.currentSparklines[String(e.id)])||e.sparkline, gs.bc)}
         <span class="sbadge" style="${statusStyle(status)}">${status}</span>
         ${trendLbl(trend)}
       </div>
@@ -741,7 +767,7 @@ function renderArtists() {
         <div class="score-num">${score}</div>
         <div class="score-lbl">score</div>
 
-        ${sparkHtml(a.sparkline, gs.bc)}
+        ${sparkHtml((window.currentSparklines&&window.currentSparklines[String(a.id)])||a.sparkline, gs.bc)}
         ${trendLbl(trend)}
       </div>
     </div>`;
