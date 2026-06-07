@@ -198,7 +198,7 @@ SEED_SHOWS = [
         "name":        "Emerald Hill",
         "genre":       "local",
         "context":     "Star Awards 2026 biggest winner — 6 awards including Best Drama",
-        "search_term": "Emerald Hill",
+        "search_term": "Emerald Hill Little Nyonya Story",
         "tmdb_id":     None,
     },
     {
@@ -272,7 +272,7 @@ SEED_SHOWS = [
         "name":        "The White Lotus Season 3",
         "genre":       "western",
         "context":     "Thailand setting — SG viewers very engaged",
-        "search_term": "The White Lotus",
+        "search_term": "The White Lotus Season 3",
         "tmdb_id":     None,
     },
 
