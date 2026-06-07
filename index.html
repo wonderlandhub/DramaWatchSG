@@ -21,7 +21,7 @@ a{text-decoration:none;}
 .page{max-width:1200px;margin:0 auto;padding:0 32px 64px;}
 
 /* HEADER */
-.site-header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 16px;border-bottom:1px solid var(--border);}
+.site-header{display:flex;align-items:center;justify-content:space-between;padding:18px 32px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;background:var(--bg);backdrop-filter:blur(8px);margin:0 -32px;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-mark{width:34px;height:34px;border-radius:9px;background:#1A1A18;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;letter-spacing:-0.3px;flex-shrink:0;}
 .logo-name{font-size:15px;font-weight:500;color:var(--t1);}
@@ -36,7 +36,7 @@ a{text-decoration:none;}
 .hero p{font-size:13px;color:var(--t2);line-height:1.7;}
 
 /* MAIN NAV */
-.main-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0 0;margin-bottom:16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
+.main-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 32px;margin:0 -32px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;position:sticky;top:57px;z-index:99;background:var(--bg);backdrop-filter:blur(8px);}
 .seg-ctrl{display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:2px;}
 .seg-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:7px 18px;border:none;border-radius:8px;background:transparent;color:var(--t2);cursor:pointer;transition:all .15s;white-space:nowrap;font-family:var(--font);}
 .seg-btn:hover:not(.on){background:rgba(255,255,255,.5);color:var(--t1);}
@@ -370,6 +370,7 @@ function setMain(m,btn) {
 function setSub(id) {
   subTab[mainTab]=id;
   renderSubTabs();
+  renderMovers();
   renderPanel();
 }
 function periodLabel() {
@@ -446,56 +447,112 @@ function renderRanks() {
 }
 
 // ── RENDER CHART ──────────────────────────────────────────────────────────
-function renderChart() {
+async function renderChart() {
   document.getElementById('chart-ptag').textContent = periodLabel();
   if(chartInst) chartInst.destroy();
 
-  const data = mainTab==='shows'?SHOWS : mainTab==='artists'?ARTISTS : EVENTS;
   const topGenres = GENRES.filter(g=>g.is_top5).slice(0,3);
   if(!topGenres.length) return;
 
-  // Chart points differ per period — showing score evolution over time
-  const periodPoints = {
-    today: [
-      {label:'3 months ago', field:'score_3m'},
-      {label:'30 days ago',  field:'score_30d'},
-      {label:'7 days ago',   field:'score_7d'},
-      {label:'Today',        field:'score_today'},
-    ],
-    '7d': [
-      {label:'3 months ago', field:'score_3m'},
-      {label:'30 days ago',  field:'score_30d'},
-      {label:'Last 7 days',  field:'score_7d'},
-    ],
-    '30d': [
-      {label:'3 months ago', field:'score_3m'},
-      {label:'Last 30 days', field:'score_30d'},
-    ],
-    '3m': [
-      {label:'Last 30 days', field:'score_30d'},
-      {label:'Last 3 months',field:'score_3m'},
-    ],
+  // Determine date range and history table based on period
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+  const periodConfig = {
+    today: { days: 2,  table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
+    '7d':  { days: 7,  table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
+    '30d': { days: 30, table: 'shows_history',   id: 'show_id',   groupBy: 'day' },
+    '3m':  { days: 90, table: 'shows_history',   id: 'show_id',   groupBy: 'week'},
   };
 
-  const points = periodPoints[period] || periodPoints['today'];
-  const labels = points.map(p=>p.label);
+  const cfg = periodConfig[period] || periodConfig['today'];
+  const fromDate = new Date(now);
+  fromDate.setDate(fromDate.getDate() - cfg.days);
+  const fromStr = fmtDate(fromDate);
 
-  const datasets = topGenres.map(g=>{
-    const items = data.filter(r=>r.genre===g.code && getScore(r)>0);
-    // Average score per period point across all items in this genre
-    const chartData = points.map(p=>{
-      const vals = items.map(r=>Number(r[p.field]||0)).filter(v=>v>0);
-      return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+  // Use shows history for chart — always shows tab data
+  const histTable = mainTab === 'artists' ? 'artists_history' : mainTab === 'events' ? 'events_history' : 'shows_history';
+  const idField   = mainTab === 'artists' ? 'artist_id'       : mainTab === 'events' ? 'event_id'       : 'show_id';
+
+  // Build show_id → genre map from current data
+  const data = mainTab==='shows'?SHOWS : mainTab==='artists'?ARTISTS : EVENTS;
+  const idToGenre = {};
+  data.forEach(r => { idToGenre[r.id] = r.genre; });
+
+  // Fetch history rows for date range
+  let histRows = [];
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/${histTable}?select=${idField},score,recorded_at&recorded_at=gte.${fromStr}T00:00:00Z&order=recorded_at.asc&limit=5000`,
+      { headers: SB_HEADERS }
+    );
+    if(res.ok) histRows = await res.json();
+  } catch(e) {
+    console.warn('Chart fetch error:', e);
+    return;
+  }
+
+  // Group rows by genre and date
+  // For 3m — group by week, else by day
+  const getKey = (recorded_at) => {
+    const d = new Date(recorded_at);
+    if(cfg.groupBy === 'week') {
+      // Get week start (Monday)
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day===0?-6:1);
+      const mon = new Date(d.setDate(diff));
+      return fmtDate(mon);
+    }
+    return fmtDate(d);
+  };
+
+  // Build {genre: {dateKey: [scores]}}
+  const genreData = {};
+  topGenres.forEach(g => { genreData[g.code] = {}; });
+
+  histRows.forEach(row => {
+    const genre = idToGenre[row[idField]];
+    if(!genre || !genreData[genre]) return;
+    const key = getKey(row.recorded_at);
+    if(!genreData[genre][key]) genreData[genre][key] = [];
+    genreData[genre][key].push(Number(row.score||0));
+  });
+
+  // Collect all date keys sorted
+  const allKeys = [...new Set(
+    Object.values(genreData).flatMap(g=>Object.keys(g))
+  )].sort();
+
+  if(!allKeys.length) return;
+
+  // Format labels
+  const fmtLabel = key => {
+    const d = new Date(key+'T00:00:00');
+    if(cfg.groupBy==='week') return `w/c ${d.getDate()} ${d.toLocaleString('en-SG',{month:'short'})}`;
+    if(cfg.days<=2) return d.toLocaleString('en-SG',{weekday:'short',day:'numeric',month:'short'});
+    return `${d.getDate()} ${d.toLocaleString('en-SG',{month:'short'})}`;
+  };
+
+  const labels = allKeys.map(fmtLabel);
+
+  const datasets = topGenres.map(g => {
+    const chartData = allKeys.map(key => {
+      const scores = genreData[g.code][key] || [];
+      if(!scores.length) return null;
+      return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
     });
     return {
-      label:       g.label,
-      data:        chartData,
-      borderColor: g.dot_color,
-      borderWidth: 2,
-      pointRadius: 3,
+      label:            g.label,
+      data:             chartData,
+      borderColor:      g.dot_color,
+      backgroundColor:  g.dot_color+'20',
+      borderWidth:      2,
+      pointRadius:      cfg.days<=7 ? 3 : 2,
       pointBackgroundColor: g.dot_color,
-      fill:        false,
-      tension:     0.4,
+      fill:             false,
+      tension:          0.4,
+      spanGaps:         true,
     };
   });
 
@@ -512,7 +569,11 @@ function renderChart() {
       scales:{
         x:{
           grid:{display:false},
-          ticks:{font:{size:10},color:'#9C9C96'}
+          ticks:{
+            font:{size:10},
+            color:'#9C9C96',
+            maxTicksLimit: cfg.days<=7 ? 7 : cfg.days<=30 ? 10 : 13,
+          }
         },
         y:{
           grid:{color:'rgba(0,0,0,0.04)'},
@@ -762,7 +823,7 @@ function renderMovers() {
 function updateAll() {
   renderKPI();
   renderRanks();
-  renderChart();
+  renderChart();  // async — runs independently
   renderMovers();
   renderSubTabs();
   renderPanel();
