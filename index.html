@@ -377,15 +377,14 @@ function setSub(id) {
   renderPanel();
 }
 function periodLabel() {
+  // Get latest available date from data
+  const lastRow = (SHOWS[0]||ARTISTS[0]||EVENTS[0]);
+  const latestDateStr = lastRow?.last_recorded_at
+    ? new Date(lastRow.last_recorded_at).toLocaleString('en-SG',{timeZone:'Asia/Singapore',day:'numeric',month:'short',year:'numeric'})
+    : null;
+
   if(period==='today') {
-    // Show last scored date
-    const lastRow = (SHOWS[0]||ARTISTS[0]||EVENTS[0]);
-    if(lastRow && lastRow.last_recorded_sgt) {
-      const d = new Date(lastRow.last_recorded_at);
-      const fmt = d.toLocaleString('en-SG',{timeZone:'Asia/Singapore',day:'numeric',month:'short',year:'numeric'});
-      return `Today · as of ${fmt}`;
-    }
-    return 'Today';
+    return latestDateStr ? `Today · as of ${latestDateStr}` : 'Today';
   }
   return {'7d':'Last 7 days','30d':'Last 30 days','3m':'Last 3 months'}[period];
 }
@@ -483,9 +482,14 @@ async function renderChart() {
 
   const cfg = periodConfig[period] || periodConfig['today'];
 
-  // All periods end at today — only start date differs
-  const toDate   = new Date(now);
-  const fromDate = new Date(now);
+  // End date = latest available data date (not necessarily today)
+  // This handles case where midnight run hasn't happened yet
+  const lastRow = (SHOWS[0] || ARTISTS[0] || EVENTS[0]);
+  const latestDate = lastRow?.last_recorded_at
+    ? new Date(lastRow.last_recorded_at)
+    : new Date(now);
+  const toDate   = latestDate;
+  const fromDate = new Date(latestDate);
   fromDate.setDate(fromDate.getDate() - cfg.days);
   const fromStr = fmtDate(fromDate);
   const toStr   = fmtDate(toDate);
