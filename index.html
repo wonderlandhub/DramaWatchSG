@@ -246,7 +246,7 @@ a{text-decoration:none;}
 // Supabase → Settings → API → anon public
 // ═══════════════════════════════════════════════════════════════════════════
 const SB_URL     = 'https://elcwdfrndqpjxsdsvcso.supabase.co';
-const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsY3dkZnJuZHFwanhzZHN2Y3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDAxODIsImV4cCI6MjA5NTg3NjE4Mn0.IEXDINz0VT8XkXMFucqKdR6A8XgInA25qvxda278FkM';
+const SB_KEY     = 'YOUR_ANON_KEY_HERE';
 const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` };
 
 async function sbFetch(table, params) {
@@ -379,7 +379,9 @@ function setSub(id) {
 function periodLabel() {
   // Get latest available date from data
   const lastRow = (SHOWS[0]||ARTISTS[0]||EVENTS[0]);
-  const latestDateStr = lastRow?.last_recorded_at
+  const latestDateStr = lastRow?.last_recorded_sgt
+    ? new Date(lastRow.last_recorded_sgt.substring(0,10)+'T00:00:00').toLocaleString('en-SG',{day:'numeric',month:'short',year:'numeric'})
+    : lastRow?.last_recorded_at
     ? new Date(lastRow.last_recorded_at).toLocaleString('en-SG',{timeZone:'Asia/Singapore',day:'numeric',month:'short',year:'numeric'})
     : null;
 
@@ -485,9 +487,19 @@ async function renderChart() {
   // End date = latest available data date (not necessarily today)
   // This handles case where midnight run hasn't happened yet
   const lastRow = (SHOWS[0] || ARTISTS[0] || EVENTS[0]);
-  const latestDate = lastRow?.last_recorded_at
-    ? new Date(lastRow.last_recorded_at)
-    : new Date(now);
+  // Use last_recorded_sgt (SGT date string) for accurate date in SGT timezone
+  let latestDate;
+  if(lastRow?.last_recorded_sgt) {
+    // last_recorded_sgt is like "2026-06-07T16:00:00+08:00" — extract date part
+    latestDate = new Date(lastRow.last_recorded_sgt.substring(0,10)+'T00:00:00');
+  } else if(lastRow?.last_recorded_at) {
+    // Fallback: convert UTC to SGT date
+    const d = new Date(lastRow.last_recorded_at);
+    const sgtStr = d.toLocaleDateString('en-CA',{timeZone:'Asia/Singapore'});
+    latestDate = new Date(sgtStr+'T00:00:00');
+  } else {
+    latestDate = new Date(now);
+  }
   const toDate   = latestDate;
   const fromDate = new Date(latestDate);
   fromDate.setDate(fromDate.getDate() - cfg.days);
