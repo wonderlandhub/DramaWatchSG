@@ -255,6 +255,12 @@ async function sbFetch(table, params) {
   return res.json();
 }
 
+// ── GLOBAL HELPERS ───────────────────────────────────────────────────────
+function fmtDate(d) {
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
 // ── SPARKLINE ─────────────────────────────────────────────────────────────
 function drawSparkline(canvas, data, color) {
   if (!canvas || !data || data.length < 2) return;
@@ -471,9 +477,6 @@ async function renderChart() {
   if(!topGenres.length) return;
 
   // Determine date range and history table based on period
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const fmtDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
   const periodConfig = {
     today: { days: 3,  groupBy: 'day' },
@@ -523,6 +526,7 @@ async function renderChart() {
       { headers: SB_HEADERS }
     );
     if(res.ok) histRows = await res.json();
+
   } catch(e) {
     console.warn('Chart fetch error:', e);
     return;
