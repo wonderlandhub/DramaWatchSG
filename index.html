@@ -246,7 +246,7 @@ a{text-decoration:none;}
 // Supabase → Settings → API → anon public
 // ═══════════════════════════════════════════════════════════════════════════
 const SB_URL     = 'https://elcwdfrndqpjxsdsvcso.supabase.co';
-const SB_KEY     = 'YOUR_ANON_KEY_HERE';
+const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsY3dkZnJuZHFwanhzZHN2Y3NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDAxODIsImV4cCI6MjA5NTg3NjE4Mn0.IEXDINz0VT8XkXMFucqKdR6A8XgInA25qvxda278FkM';
 const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` };
 
 async function sbFetch(table, params) {
