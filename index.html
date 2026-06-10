@@ -228,8 +228,24 @@ a{text-decoration:none;}
   <div class="s3-header">
     <div class="s3-top">
       <span class="s3-title" id="s3-title">Now trending <span class="s3-per">· Today</span></span>
-      <div class="genre-tabs" id="genre-tabs"></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="position:relative;">
+          <input id="search-input" type="text" placeholder="Search shows, artists..." 
+            style="font-size:12px;padding:6px 12px 6px 30px;border:1px solid var(--border-med);border-radius:20px;background:var(--surface2);color:var(--t1);font-family:var(--font);outline:none;width:200px;"
+            oninput="filterSearch(this.value)"
+          />
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--t3);">🔍</span>
+        </div>
+        <select id="sort-select" onchange="setSortMode(this.value)"
+          style="font-size:12px;padding:6px 10px;border:1px solid var(--border-med);border-radius:20px;background:var(--surface2);color:var(--t2);font-family:var(--font);outline:none;cursor:pointer;">
+          <option value="score">Score ▼</option>
+          <option value="rising">Rising ↑</option>
+          <option value="newest">Newest</option>
+          <option value="az">A–Z</option>
+        </select>
+      </div>
     </div>
+    <div class="genre-tabs" id="genre-tabs"></div>
   </div>
   <!-- Biggest Movers strip — compact, inside s3 card -->
   <div id="movers-strip" style="border-bottom:1px solid var(--border);padding:10px 20px;background:var(--surface2);display:none;"></div>
@@ -295,6 +311,15 @@ function sparkHtml(data, color) {
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
+function isNewEntry(item) {
+  // True if item was first seen within last 7 days
+  if(!item.last_recorded_at) return false;
+  const first = new Date(item.last_recorded_at);
+  const now = new Date();
+  const daysDiff = (now - first) / (1000 * 60 * 60 * 24);
+  return daysDiff <= 7;
+}
+
 function fmtVol(n) {
   n=Number(n)||0;
   if(n>=1000000) return (n/1000000).toFixed(1)+'M';
@@ -352,6 +377,7 @@ const EV_ICONS = {
 let mainTab='shows', subTab={shows:'all',events:'all',artists:'all'}, period='today';
 let SHOWS=[], ARTISTS=[], EVENTS=[], GENRES=[];
 let chartInst=null;
+let searchQuery='', sortMode='score';
 
 // Period field mapping
 const SCORE_FIELD  = {today:'score_today', '7d':'score_7d',  '30d':'score_30d',  '3m':'score_3m'};
@@ -370,10 +396,31 @@ function setPeriod(p,btn) {
   btn.classList.add('on');
   updateAll();
 }
+
+function filterSearch(q) {
+  searchQuery = q.toLowerCase().trim();
+  renderPanel();
+}
+
+function setSortMode(mode) {
+  sortMode = mode;
+  renderPanel();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  const inp = document.getElementById('search-input');
+  if(inp) inp.value = '';
+  renderPanel();
+}
 function setMain(m,btn) {
   mainTab=m;
   document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
+  clearSearch();
+  sortMode='score';
+  const sel = document.getElementById('sort-select');
+  if(sel) sel.value='score';
   updateAll();
 }
 function setSub(id) {
@@ -401,11 +448,43 @@ function periodLabel() {
 function currentData() {
   const all = mainTab==='shows'?SHOWS : mainTab==='artists'?ARTISTS : EVENTS;
   // Filter out items with 0 score for the current period
-  const active = all.filter(r=>getScore(r)>0);
+  let active = all.filter(r=>getScore(r)>0);
   const genre = subTab[mainTab];
-  if(genre==='all') return [...active].sort((a,b)=>getScore(b)-getScore(a));
-  if(genre==='others') return active.filter(r=>!GENRES.some(g=>g.is_top5&&g.code===r.genre)).sort((a,b)=>getScore(b)-getScore(a));
-  return active.filter(r=>r.genre===genre).sort((a,b)=>getScore(b)-getScore(a));
+  if(genre==='others') active = active.filter(r=>!GENRES.some(g=>g.is_top5&&g.code===r.genre));
+  else if(genre!=='all') active = active.filter(r=>r.genre===genre);
+
+  // Apply search filter
+  if(searchQuery) {
+    active = active.filter(r=>{
+      const name = (r.name||r.title||'').toLowerCase();
+      const cn   = (r.chinese_title||'').toLowerCase();
+      const show = (r.show_name||'').toLowerCase();
+      const ctx  = (r.context||'').toLowerCase();
+      return name.includes(searchQuery) || cn.includes(searchQuery) ||
+             show.includes(searchQuery) || ctx.includes(searchQuery);
+    });
+  }
+
+  // Apply sort
+  switch(sortMode) {
+    case 'rising':
+      // Sort by delta: score_today - score_7d
+      return active.sort((a,b)=>{
+        const da = (Number(a.score_today)||0) - (Number(a.score_7d)||0);
+        const db = (Number(b.score_today)||0) - (Number(b.score_7d)||0);
+        return db - da;
+      });
+    case 'newest':
+      return active.sort((a,b)=>{
+        const da = new Date(a.last_recorded_at||0);
+        const db = new Date(b.last_recorded_at||0);
+        return da - db; // oldest first = recently added to tracking
+      });
+    case 'az':
+      return active.sort((a,b)=>(a.name||a.title||'').localeCompare(b.name||b.title||''));
+    default: // score
+      return active.sort((a,b)=>getScore(b)-getScore(a));
+  }
 }
 
 // ── RENDER KPI ────────────────────────────────────────────────────────────
@@ -432,7 +511,18 @@ function renderKPI() {
     <div class="kpi" title="Google Trends relative popularity index — 100 = peak search interest in SG. Not absolute search counts."><div class="kpi-label">Search index <span style="font-size:10px;cursor:help;" title="Relative popularity score from Google Trends SG. 100 = peak interest. Not absolute search counts.">ⓘ</span></div><div class="kpi-val">${totalScore>0?Math.round(totalScore):'–'}</div><div class="kpi-sub kpi-up">${periodLabel()}</div></div>
     <div class="kpi"><div class="kpi-label">${l1}</div><div class="kpi-val" style="font-size:14px;padding-top:3px;">${topGLabel}</div><div class="kpi-sub">${topG?Math.round(topG[1]):0} total score</div></div>
     <div class="kpi"><div class="kpi-label">${l2}</div><div class="kpi-val" style="font-size:13px;padding-top:4px;">${topName}</div><div class="kpi-sub">Score ${Math.round(getScore(top))}</div></div>
-    <div class="kpi"><div class="kpi-label">Genres tracked</div><div class="kpi-val">${GENRES.filter(g=>g.is_top5).length+1}</div><div class="kpi-sub">Top 5 + Others</div></div>`;
+    <div class="kpi"><div class="kpi-label">Genres tracked</div><div class="kpi-val">${GENRES.filter(g=>g.is_top5).length+1}</div><div class="kpi-sub">Top 5 + Others</div></div>
+    <div id="new-entries-kpi"></div>`;
+  // New entries this week
+  const newEntries = data.filter(r=>isNewEntry(r));
+  if(newEntries.length > 0) {
+    document.getElementById('new-entries-kpi').outerHTML = 
+      \`<div class="kpi" style="border:1px solid #BAE6FD;background:#F0F9FF;">
+        <div class="kpi-label" style="color:#0369A1;">New this week</div>
+        <div class="kpi-val" style="color:#0C4A6E;">\${newEntries.length}</div>
+        <div class="kpi-sub" style="color:#0369A1;">\${newEntries.slice(0,2).map(r=>r.name||r.title).join(', ')}\${newEntries.length>2?'…':''}</div>
+      </div>\`;
+  }
 }
 
 // ── RENDER RANKS ──────────────────────────────────────────────────────────
@@ -717,7 +807,8 @@ function renderShows() {
         <div class="item-meta">
           <span class="cat-pill" style="${gs.gps}">${gs.label}</span>
         </div>
-        ${s.description?`<div class="item-desc">${s.description.slice(0,180)}${s.description.length>180?'…':''}</div>`:''}
+        ${s.context?`<div style="font-size:11px;color:var(--t2);font-style:italic;margin-bottom:3px;">${s.context}</div>`:''}
+        ${s.description?`<div class="item-desc">${s.description.slice(0,160)}${s.description.length>160?'…':''}</div>`:''}
         <div class="pill-row">${mkPills(plats)}</div>
       </div>
       <div class="item-right">
