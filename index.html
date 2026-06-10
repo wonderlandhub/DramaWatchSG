@@ -469,10 +469,9 @@ function renderRanks() {
 // ── RENDER CHART ──────────────────────────────────────────────────────────
 async function renderChart() {
   document.getElementById('chart-ptag').textContent = periodLabel();
-  // All periods share same end date — label the end of chart
-  document.getElementById('chart-end-date').textContent = fmtDate(toDate);
   if(chartInst) chartInst.destroy();
 
+  const now = new Date();
   const topGenres = GENRES.filter(g=>g.is_top5).slice(0,3);
   if(!topGenres.length) return;
 
@@ -508,6 +507,10 @@ async function renderChart() {
   fromDate.setDate(fromDate.getDate() - cfg.days);
   const fromStr = fmtDate(fromDate);
   const toStr   = fmtDate(toDate);
+
+  // Update end date label now that toDate is defined
+  const endDateEl = document.getElementById('chart-end-date');
+  if(endDateEl) endDateEl.textContent = toStr;
 
   // Use shows history for chart — always shows tab data
   const histTable = mainTab === 'artists' ? 'artists_history' : mainTab === 'events' ? 'events_history' : 'shows_history';
