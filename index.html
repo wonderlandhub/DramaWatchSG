@@ -535,6 +535,18 @@ async function renderChart() {
     return;
   }
 
+  // Group rows by date key
+  const getKey = (recorded_at) => {
+    const d = new Date(recorded_at);
+    if(cfg.groupBy === 'week') {
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day===0?-6:1);
+      const mon = new Date(d.setDate(diff));
+      return fmtDate(mon);
+    }
+    return fmtDate(d);
+  };
+
   // Build period-aware sparklines per item from same fetched data
   const sparklineMap = {};
   histRows.forEach(row => {
@@ -557,19 +569,7 @@ async function renderChart() {
   // Redraw panel with period-correct sparklines
   renderPanel();
 
-  // Group rows by genre and date
-  // For 3m — group by week, else by day
-  const getKey = (recorded_at) => {
-    const d = new Date(recorded_at);
-    if(cfg.groupBy === 'week') {
-      // Get week start (Monday)
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day===0?-6:1);
-      const mon = new Date(d.setDate(diff));
-      return fmtDate(mon);
-    }
-    return fmtDate(d);
-  };
+
 
   // Build {genre: {dateKey: [scores]}}
   const genreData = {};
