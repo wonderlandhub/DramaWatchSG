@@ -62,10 +62,23 @@ def justwatch_sg_platforms(title):
         return set()
 
 def main():
-    shows = requests.get(f"{SB_URL}/rest/v1/shows_master?select=id,name,search_term,genre_id,platforms",
-                          headers=HEADERS).json()
-    genres = {g["id"]: g["code"] for g in
-              requests.get(f"{SB_URL}/rest/v1/genres?select=id,code", headers=HEADERS).json()}
+    if not SB_URL or not SB_KEY:
+        print("ERROR: SUPABASE_URL or SUPABASE_SERVICE_KEY env var is missing/empty")
+        return
+
+    shows_resp = requests.get(f"{SB_URL}/rest/v1/shows_master?select=id,name,search_term,genre_id,platforms",
+                               headers=HEADERS)
+    genres_resp = requests.get(f"{SB_URL}/rest/v1/genres?select=id,code", headers=HEADERS)
+
+    if shows_resp.status_code != 200:
+        print(f"ERROR fetching shows_master: {shows_resp.status_code} {shows_resp.text[:300]}")
+        return
+    if genres_resp.status_code != 200:
+        print(f"ERROR fetching genres: {genres_resp.status_code} {genres_resp.text[:300]}")
+        return
+
+    shows = shows_resp.json()
+    genres = {g["id"]: g["code"] for g in genres_resp.json()}
 
     for s in shows:
         if s.get("platforms"):
