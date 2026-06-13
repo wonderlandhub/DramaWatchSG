@@ -446,7 +446,7 @@ def main():
     for term in event_terms:
         queries = fetch_related_queries(pytrends, term)
         # Also consider the term itself as a candidate (not just related queries)
-        for query in [term] + queries:
+        for query in queries:
             query_lower = query.lower()
             if query_lower in known_events:
                 continue
