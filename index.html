@@ -137,26 +137,45 @@ a{text-decoration:none;}
 .sort-select{font-size:12px;padding:6px 10px;border:1px solid var(--border-med);border-radius:20px;background:var(--surface2);color:var(--t2);font-family:var(--font);outline:none;cursor:pointer;}
 
 /* ── TABLET: 768–1100px ──────────────────────────────────────────────── */
+/* ── TABLET: 768–1100px ──────────────────────────────────────────────── */
 @media(max-width:1100px){
-  .analytics-grid{grid-template-columns:1fr 1fr!important;}
-  #new-this-week-card{grid-column:1/-1!important;max-height:240px;}
-  .analytics-kpi-row{grid-template-columns:1fr 1fr!important;}
+  #analytics-outer{grid-template-columns:1fr!important;}
+  #new-this-week-card{height:auto!important;max-height:320px!important;}
+  .kpi-row3{grid-template-columns:1fr 1fr 1fr!important;}
+  .charts-row{grid-template-columns:1fr 1fr!important;}
 }
 /* ── MOBILE: <768px ──────────────────────────────────────────────────── */
 @media(max-width:768px){
   .page{padding:0 16px 48px;}
-  .analytics-grid{grid-template-columns:1fr!important;gap:12px!important;}
-  #new-this-week-card{max-height:200px;}
-  .analytics-kpi-row{grid-template-columns:1fr 1fr!important;}
+  .site-header{margin:0 -16px;padding:14px 16px 12px;}
+  .main-nav{margin:0 -16px 16px;padding:12px 16px;flex-direction:column;align-items:stretch;gap:10px;}
+  .seg-ctrl{width:100%;}
+  .seg-btn{flex:1;padding:8px 10px;font-size:12px;justify-content:center;}
+  .period-wrap{padding-bottom:0;flex-wrap:wrap;}
+  .period-pills{flex-wrap:wrap;}
+  .hero h1{white-space:normal!important;font-size:19px;}
+
+  #analytics-outer{grid-template-columns:1fr!important;gap:12px!important;}
+  .kpi-row3{grid-template-columns:1fr!important;gap:10px!important;}
+  .kpi{min-height:auto!important;padding:12px;}
+  .charts-row{grid-template-columns:1fr!important;}
+  #new-this-week-card{height:auto!important;max-height:280px!important;}
+
   .s2{grid-template-columns:1fr;}
   .artist-grid{grid-template-columns:1fr;}
   .artist-row{border-right:none;overflow:hidden;}
   .artist-row:nth-last-child(-n+2){border-bottom:1px solid var(--border);}
   .artist-row:last-child{border-bottom:none;}
-  .seg-btn{padding:6px 12px;font-size:12px;}
-  .main-nav{flex-direction:column;align-items:flex-start;}
-  .period-wrap{padding-bottom:0;}
   .search-input{width:100%!important;}
+  .item-row{gap:8px;}
+  .item-flag{width:36px;height:44px;font-size:11px;}
+  .item-right{width:64px;}
+  .spark-wrap{width:56px;}
+  .score-num{font-size:17px;}
+}
+@media(max-width:420px){
+  .kpi-row3{grid-template-columns:1fr 1fr!important;}
+  .kpi-row3 .kpi:first-child{grid-column:1/-1;}
 }
 </style>
 </head>
@@ -204,14 +223,14 @@ a{text-decoration:none;}
   <div style="display:flex;flex-direction:column;gap:14px;min-width:0;" id="analytics-left">
 
     <!-- 3 equal KPI containers -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+    <div class="kpi-row3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
       <div class="kpi" id="kpi-index" style="min-height:90px;"></div>
       <div class="kpi" id="kpi-genre" style="min-height:90px;"></div>
       <div class="kpi" id="kpi-hot" style="min-height:90px;"></div>
     </div>
 
     <!-- Charts row: Genre breakdown (1/3) + Search trend (2/3) -->
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;">
+    <div class="charts-row" style="display:grid;grid-template-columns:1fr 2fr;gap:14px;">
       <div class="s2-card" style="display:flex;flex-direction:column;">
         <div class="sec-lbl">Genre breakdown <span class="ptag" id="rank-ptag">Today</span></div>
         <div id="pie-legend" style="display:flex;flex-direction:column;gap:7px;margin-top:4px;"></div>
@@ -1005,6 +1024,12 @@ function syncNewThisWeekHeight() {
   const left=document.getElementById('analytics-left');
   const card=document.getElementById('new-this-week-card');
   if(!left||!card) return;
+  if(window.innerWidth<=1100){
+    card.style.height='';card.style.maxHeight='';
+    const list=document.getElementById('new-week-list');
+    if(list) list.style.maxHeight='';
+    return;
+  }
   const h=left.offsetHeight;
   if(h>0) {
     card.style.height=h+'px';
@@ -1062,9 +1087,20 @@ async function loadLiveData() {
     console.log(`✅ Loaded: ${SHOWS.length} shows, ${ARTISTS.length} artists, ${EVENTS.length} events, ${GENRES.length} genres`);
     const lastRow=showRows[0];
     if(lastRow?.last_recorded_sgt) {
-      const sgt=new Date(lastRow.last_recorded_at);
+      const recordedAt=new Date(lastRow.last_recorded_at);
+      const sgt=recordedAt;
       const fmt=sgt.toLocaleString('en-SG',{timeZone:'Asia/Singapore',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      document.getElementById('live-time').textContent=`Updated ${fmt} SGT`;
+      const hoursAgo=(Date.now()-recordedAt.getTime())/(1000*60*60);
+      const pill=document.querySelector('.live-pill');
+      const dot=pill?.querySelector('.ldot');
+      const label=document.getElementById('live-time');
+      if(hoursAgo>36) {
+        label.textContent=`Updated ${fmt} SGT · ${Math.floor(hoursAgo)}h ago`;
+        if(pill){pill.style.background='#FCEBEB';pill.style.borderColor='#F5C6C6';pill.style.color='#791F1F';}
+        if(dot){dot.style.background='#A32D2D';dot.style.animation='none';}
+      } else {
+        label.textContent=`Updated ${fmt} SGT`;
+      }
     }
   } catch(err) {
     console.error('Supabase error:',err.message);
@@ -1074,6 +1110,7 @@ async function loadLiveData() {
   hidePageState();
   updateAll();
 }
+window.addEventListener('resize',()=>{clearTimeout(window._rsz);window._rsz=setTimeout(syncNewThisWeekHeight,150);});
 setInterval(loadLiveData,30*60*1000);
 loadLiveData();
 </script>
