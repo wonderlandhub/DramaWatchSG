@@ -1,48 +1,58 @@
 """
-Fix missing platforms for shows_master using JustWatch (real SG availability).
-
-JustWatch covers Viu, WeTV, iQIYI, meWatch, Netflix, Disney+ etc for Singapore —
-far better than TMDB for Asian dramas.
-
-Run: pip install simplejustwatchapi
-     python3 fix_platforms.py
-Requires: SUPABASE_URL, SUPABASE_SERVICE_KEY env vars
+Fix missing platforms for shows_master using JustWatch's public GraphQL API
+(direct request — no extra package needed).
 """
 import os, time, requests
-from simplejustwatchapi.justwatch import search
 
 SB_URL  = os.environ.get("SUPABASE_URL")
 SB_KEY  = os.environ.get("SUPABASE_SERVICE_KEY")
 HEADERS = {"apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}", "Content-Type": "application/json"}
 
-# JustWatch provider name -> our PP keys (see index.html PP object)
+JW_URL = "https://apis.justwatch.com/graphql"
 JW_TO_PP = {
-    "netflix": "netflix",
-    "disney plus": "disney",
-    "viu": "viu",
-    "wetv": "wetv",
-    "iq.": "iqiyi", "iqiyi": "iqiyi",
-    "amazon prime video": "amazon",
-    "youtube": "youtube",
-    "mewatch": "mewatch",
-    "zee5": "zee5",
+    "netflix": "netflix", "disney plus": "disney", "viu": "viu",
+    "wetv": "wetv", "iq.": "iqiyi", "iqiyi": "iqiyi",
+    "amazon prime video": "amazon", "youtube": "youtube",
+    "mewatch": "mewatch", "zee5": "zee5",
 }
-
-# Last-resort fallback ONLY if JustWatch also returns nothing
 GENRE_FALLBACK = {
     "kdrama": ["viu"], "cdrama": ["wetv","iqiyi"], "thai": ["viu","gmmtv"],
     "local": ["mewatch"], "western": ["netflix"], "others": ["viu"],
 }
 
+SEARCH_QUERY = """
+query GetSearchTitles($searchTitlesFilter: TitleFilter!, $country: Country!, $language: Language!) {
+  popularTitles(country: $country, filter: $searchTitlesFilter, first: 1) {
+    edges {
+      node {
+        offers(country: $country, platform: WEB) {
+          package { clearName }
+        }
+      }
+    }
+  }
+}
+"""
+
 def justwatch_sg_platforms(title):
     try:
-        results = search(title, "SG", "en", count=1, best_only=True)
-        if not results:
+        payload = {
+            "query": SEARCH_QUERY,
+            "variables": {
+                "searchTitlesFilter": {"searchQuery": title},
+                "country": "SG",
+                "language": "en"
+            }
+        }
+        r = requests.post(JW_URL, json=payload, timeout=10)
+        r.raise_for_status()
+        edges = r.json()["data"]["popularTitles"]["edges"]
+        if not edges:
             return set()
-        offers = results[0].offers or []
+        offers = edges[0]["node"].get("offers", [])
         names = set()
         for o in offers:
-            pname = (o.package.name or "").lower()
+            pname = (o["package"]["clearName"] or "").lower()
             for k, v in JW_TO_PP.items():
                 if k in pname:
                     names.add(v)
