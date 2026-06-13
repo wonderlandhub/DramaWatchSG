@@ -83,13 +83,24 @@ DISCOVERY_TERMS = {
         "Western series artists Singapore","Japanese drama artists Singapore",
         "Turkish drama artists Singapore","Indian drama artists Singapore",
     ],
-    "events": [
-        "Korean drama event Singapore","Chinese drama event Singapore",
-        "Singapore drama event","Thai drama event Singapore",
-        "drama fan meet Singapore","drama concert Singapore",
-        "drama screening Singapore","drama awards Singapore",
-    ],
+    # "events" terms are generated dynamically per-run from existing
+    # shows/artists names + event-type suffixes — see build_event_terms()
 }
+
+EVENT_SUFFIXES = [
+    "Singapore concert", "Singapore fan meet", "Singapore tour",
+    "Singapore fan meeting", "Singapore showcase",
+]
+
+def build_event_terms(shows: list, artists: list, limit: int = 8) -> list:
+    """Build event-discovery search terms from top shows/artists names
+    combined with event-type suffixes, e.g. 'IU Singapore concert'."""
+    terms = []
+    names = [a["name"] for a in artists[:6]] + [s["name"] for s in shows[:4]]
+    for i, name in enumerate(names):
+        suffix = EVENT_SUFFIXES[i % len(EVENT_SUFFIXES)]
+        terms.append(f"{name} {suffix}")
+    return terms[:limit]
 
 TERM_TO_GENRE = {
     "Korean drama":"kdrama","Chinese drama":"cdrama",
@@ -425,6 +436,43 @@ def main():
                     except: pass
 
             time.sleep(TRENDS_DELAY)
+
+    # ── Dynamic event discovery: based on top shows/artists + event suffixes ──
+    log.info("--- Step 1b: Discovering events from top shows/artists ---")
+    sorted_artists = sorted(artists, key=lambda a: a.get("name",""))
+    sorted_shows   = sorted(shows,   key=lambda s: s.get("name",""))
+    event_terms = build_event_terms(sorted_shows, sorted_artists)
+    genre_code = "others"
+    for term in event_terms:
+        queries = fetch_related_queries(pytrends, term)
+        # Also consider the term itself as a candidate (not just related queries)
+        for query in [term] + queries:
+            query_lower = query.lower()
+            if query_lower in known_events:
+                continue
+            log.info(f"  New event candidate: '{query}'")
+            rss = enrich_event_from_rss(query, rss_entries)
+            gid = genre_map.get(genre_code) or genre_map.get("others")
+            links = [{"l":"More info","u":rss["link"]}] if rss.get("link") else []
+            row = {
+                "title":          query,
+                "genre_id":       gid,
+                "type":           rss.get("type","Event"),
+                "venue":          "",
+                "event_date":     "",
+                "description":    rss.get("description",""),
+                "links":          json.dumps(links),
+                "search_term":    query,
+                "has_description": bool(rss.get("description","").strip()),
+                "is_active":      True,
+                "updated_at":     now_utc(),
+            }
+            try:
+                sb.table("events_master").insert(row).execute()
+                known_events.add(query_lower)
+                log.info(f"  ✅ New event added: {query[:50]}")
+            except: pass
+        time.sleep(TRENDS_DELAY)
 
     # Reload after discoveries
     shows   = sb.table("shows_master").select("id,name,search_term").eq("is_active",True).execute().data or []
