@@ -133,13 +133,17 @@ a{text-decoration:none;}
 #page-state{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:var(--font);}
 @keyframes spin{to{transform:rotate(360deg)}}
 .search-sort-wrap{display:flex;align-items:center;gap:8px;}
-.react-row-full{display:flex;gap:6px;justify-content:flex-end;padding-left:0;}
-.react-btn{display:flex;align-items:center;gap:3px;font-size:10px;border:1px solid var(--border-med);background:var(--surface);color:var(--t2);border-radius:12px;padding:2px 8px;cursor:pointer;font-family:var(--font);transition:all .15s;font-weight:500;white-space:nowrap;}
+.react-row-full{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;}
+.react-btn{display:flex;align-items:center;gap:4px;font-size:11px;border:1px solid var(--border-med);background:var(--surface);color:var(--t2);border-radius:14px;padding:4px 10px;cursor:pointer;font-family:var(--font);transition:all .15s;font-weight:500;white-space:nowrap;}
 .react-btn:hover{background:var(--surface2);transform:scale(1.05);}
 .react-btn.on{background:#EAF3DE;border-color:#B8DDA0;color:#27500A;}
-.react-btn .react-icon{font-size:11px;}
-.react-btn .react-count{font-size:9px;font-weight:600;min-width:7px;}
-.react-btn .react-label{font-size:9px;}
+.react-btn.on .react-count{color:#27500A;}
+.react-btn .react-icon{font-size:13px;}
+.react-btn .react-count{font-size:11px;font-weight:700;min-width:8px;color:var(--t1);}
+.react-btn .react-label{font-size:10px;}
+.social-label{font-size:10px;color:var(--t3);align-self:center;margin-right:2px;white-space:nowrap;}
+.social-btn{display:flex;align-items:center;font-size:10px;font-weight:500;border:1px solid var(--border-med);background:var(--surface);color:var(--t2);border-radius:12px;padding:3px 9px;text-decoration:none;transition:all .15s;white-space:nowrap;}
+.social-btn:hover{background:var(--surface2);color:var(--t1);}
 .search-input{font-size:12px;padding:6px 12px 6px 30px;border:1px solid var(--border-med);border-radius:20px;background:var(--surface2);color:var(--t1);font-family:var(--font);outline:none;width:200px;}
 .search-input:focus{border-color:#7F77DD;background:var(--surface);}
 .sort-select{font-size:12px;padding:6px 10px;border:1px solid var(--border-med);border-radius:20px;background:var(--surface2);color:var(--t2);font-family:var(--font);outline:none;cursor:pointer;}
@@ -376,16 +380,39 @@ function getReactedSet(){
 function saveReactedSet(set){
   try{localStorage.setItem('dwsg_reacted',JSON.stringify([...set]));}catch(e){}
 }
-function reactionHtml(type,id){
+function reactionHtml(type,id,name){
   const reactedSet=getReactedSet();
-  return '<div class="react-row-full">'+REACTION_TYPES.map(function(rt){
+  const types=type==='artist'?REACTION_TYPES.filter(rt=>rt.emoji==='like'):REACTION_TYPES;
+  const pills=types.map(function(rt){
     const key=reactionKey(type,id,rt.emoji);
     const count=REACTIONS[key]||0;
     const reacted=reactedSet.has(key);
     const icon=reacted?rt.icon:rt.iconOff;
     return '<button class="react-btn'+(reacted?' on':'')+'" data-key="'+key+'" onclick="toggleReaction(event,\''+type+'\','+id+',\''+rt.emoji+'\')" title="'+rt.label+'">'
       +'<span class="react-icon">'+icon+'</span><span class="react-label">'+rt.label+'</span><span class="react-count">'+(count>0?count:'')+'</span></button>';
-  }).join('')+'</div>';
+  }).join('');
+  const social=name?socialLinksHtml(type,name):'';
+  return '<div class="react-row-full">'+social+pills+'</div>';
+}
+
+// Search-query variant per item type
+function socialQuery(type,name){
+  if(type==='show')   return name+' drama';
+  if(type==='event')  return name+' Singapore';
+  return name; // artist
+}
+const SOCIAL_PLATFORMS=[
+  {key:'tiktok',  label:'TikTok',  url:q=>'https://www.tiktok.com/search?q='+q},
+  {key:'youtube', label:'YouTube', url:q=>'https://www.youtube.com/results?search_query='+q},
+  {key:'reddit',  label:'Reddit',  url:q=>'https://www.reddit.com/search/?q='+q},
+  {key:'naver',   label:'Naver',   url:q=>'https://search.naver.com/search.naver?query='+q},
+];
+function socialLinksHtml(type,name){
+  const q=encodeURIComponent(socialQuery(type,name));
+  const links=SOCIAL_PLATFORMS.map(function(p){
+    return '<a class="social-btn" href="'+p.url(q)+'" target="_blank" title="Search for \''+name+'\' on '+p.label+'">'+p.label+'</a>';
+  }).join('');
+  return '<span class="social-label">🔍 Search:</span>'+links+'<span class="social-label">💬 React:</span>';
 }
 async function toggleReaction(ev,type,id,emoji){
   ev.stopPropagation();
@@ -986,7 +1013,7 @@ function renderShows() {
         ${trendLbl(trend)}
       </div>
       </div>
-      ${reactionHtml('show',s.id)}
+      ${reactionHtml('show',s.id,s.name)}
     </div>`;
   }).join('')}</div>`;
   requestAnimationFrame(drawAllSparks);
@@ -1029,7 +1056,7 @@ function renderEvents() {
         ${trendLbl(trend)}
       </div>
       </div>
-      ${reactionHtml('event',e.id)}
+      ${reactionHtml('event',e.id,e.title)}
     </div>`;
   }).join('')}</div>`;
   requestAnimationFrame(drawAllSparks);
@@ -1058,7 +1085,7 @@ function renderArtists() {
         <div class="artist-sub">${a.role||'Actor'}</div>
         <div class="item-meta" style="margin-top:3px;"><span class="cat-pill" style="${gs.gps}">${gs.label}</span></div>
         ${a.show_name?`<div class="artist-show">${a.show_name}</div>`:''}
-        ${reactionHtml('artist',a.id)}
+        ${reactionHtml('artist',a.id,a.name)}
       </div>
       <div class="item-right" style="width:96px;flex-shrink:0;">
         <div class="score-num">${score}</div>
