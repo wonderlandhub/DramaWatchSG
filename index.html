@@ -175,7 +175,7 @@ a{text-decoration:none;}
 </header>
 
 <section class="hero">
-  <h1>Trending drama searches<br>in Singapore</h1>
+  <h1 style="white-space:nowrap;">Trending drama searches in Singapore</h1>
   <p>Real Google Trends data from Singapore — which shows, artists and events SG is searching right now. Updated daily at midnight SGT.</p>
   <p style="font-size:12px;color:var(--t3);margin-top:6px;line-height:1.6;">Scores are relative popularity indexes (0–100) from Google Trends SG — 100 means peak search interest, not absolute search counts. Higher score = more SG people searching for it right now.</p>
 </section>
@@ -369,10 +369,10 @@ const PP = {
   gmmtv:{l:'GMMTV',c:'pp-gmmtv',u:'https://www.youtube.com/@GMMTV'},
   ch8:{l:'Channel 8',c:'pp-ch8',u:'https://www.mewatch.sg/channel8'},
   ch5:{l:'Channel 5',c:'pp-ch5',u:'https://www.mewatch.sg/channel5'},
-  viu:{l:'Viu',c:'pp-viu',u:'https://www.viu.com/sg'},
+  viu:{l:'Viu',c:'pp-viu',u:'https://www.viu.com'},
   zee5:{l:'ZEE5',c:'pp-zee5',u:'https://www.zee5.com'},
   youtube:{l:'YouTube',c:'pp-youtube',u:'https://www.youtube.com'},
-  amazon:{l:'Prime Video',c:'pp-amazon',u:'https://www.amazon.com/prime-video'},
+  amazon:{l:'Prime Video',c:'pp-amazon',u:'https://www.primevideo.com'},
 };
 function mkPills(plats) {
   if(!plats||!plats.length) return '';
@@ -486,7 +486,7 @@ function currentData() {
 
 // ── RENDER KPI ────────────────────────────────────────────────────────────
 function renderKPI() {
-  const data=SHOWS;
+  const data=mainTab==='shows'?SHOWS:mainTab==='artists'?ARTISTS:EVENTS;
   const sorted=[...data].sort((a,b)=>getScore(b)-getScore(a));
   const top=sorted[0]||{};
   const genreTotals={};
@@ -544,8 +544,8 @@ function renderKPI() {
       });
       // Sort genres by total score
       var sortedGenres=Object.entries(byGenre).sort(function(a,b){
-        var sa=a[1].reduce(function(t,r){return t+Math.round(getScore(r));},0);
-        var sb=b[1].reduce(function(t,r){return t+Math.round(getScore(r));},0);
+        var sa=a[1].reduce(function(t,r){return t+Math.round(Number(r.score_7d||0));},0);
+        var sb=b[1].reduce(function(t,r){return t+Math.round(Number(r.score_7d||0));},0);
         return sb-sa;
       });
       var html='';
@@ -584,7 +584,7 @@ function renderKPI() {
 let pieChartInst=null;
 function renderRanks() {
   document.getElementById('rank-ptag').textContent=periodLabel();
-  const data=SHOWS;
+  const data=mainTab==='shows'?SHOWS:mainTab==='artists'?ARTISTS:EVENTS;
   const genreTotals={};
   data.forEach(r=>{genreTotals[r.genre]=(genreTotals[r.genre]||0)+getScore(r);});
   const grand=Object.values(genreTotals).reduce((a,b)=>a+b,0)||1;
@@ -632,14 +632,36 @@ function renderRanks() {
   }
 }
 
+function showChartEmpty(title,subtitle) {
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  const wrap=document.getElementById('trendChart')?.parentElement;
+  if(wrap) wrap.innerHTML='<canvas id="trendChart"></canvas><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;gap:6px;">'
+    +'<div style="font-size:24px;margin-bottom:4px;">📈</div>'
+    +'<div style="font-size:13px;font-weight:600;color:var(--t1);">'+title+'</div>'
+    +(subtitle?'<div style="font-size:12px;color:var(--t3);max-width:240px;">'+subtitle+'</div>':'')
+    +'</div>';
+  document.getElementById('chart-legend').innerHTML='';
+  const drEl=document.getElementById('chart-date-range');
+  if(drEl) drEl.textContent='';
+}
+function clearChartEmpty() {
+  const wrap=document.getElementById('trendChart')?.parentElement;
+  if(wrap && wrap.children.length>1){
+    // remove empty-state overlay, keep canvas
+    wrap.innerHTML='<canvas id="trendChart"></canvas>';
+  }
+}
+
 // ── RENDER CHART ──────────────────────────────────────────────────────────
 async function renderChart() {
+ try {
   document.getElementById('chart-ptag').textContent=periodLabel();
   if(chartInst) chartInst.destroy();
 
   const now=new Date();
   const topGenres=GENRES.filter(g=>g.is_top5).slice(0,3);
-  if(!topGenres.length) return;
+  if(!topGenres.length){showChartEmpty('No genre data available');return;}
+  clearChartEmpty();
 
   const periodConfig={
     today:{days:3,groupBy:'day'},
@@ -652,7 +674,8 @@ async function renderChart() {
   // Get latest date from shows_history
   let latestDate;
   try {
-    const maxRes=await fetch(SB_URL+'/rest/v1/shows_history?select=recorded_at&order=recorded_at.desc&limit=1',{headers:SB_HEADERS});
+    const latestHistTable=mainTab==='shows'?'shows_history':mainTab==='artists'?'artists_history':'events_history';
+    const maxRes=await fetch(SB_URL+'/rest/v1/'+latestHistTable+'?select=recorded_at&order=recorded_at.desc&limit=1',{headers:SB_HEADERS});
     if(maxRes.ok){
       const maxRows=await maxRes.json();
       if(maxRows.length){
@@ -685,9 +708,11 @@ async function renderChart() {
 
 
   // Fetch history — paginate to bypass Supabase default 1000-row cap
+  const histTable=mainTab==='shows'?'shows_history':mainTab==='artists'?'artists_history':'events_history';
+  const idCol=mainTab==='shows'?'show_id':mainTab==='artists'?'artist_id':'event_id';
   let histRows=[];
   try{
-    const chartUrl=SB_URL+'/rest/v1/shows_history?select=show_id,score,recorded_at&recorded_at=gte.'+fromStr+'T00:00:00Z&recorded_at=lte.'+toStr+'T23:59:59Z&order=recorded_at.asc';
+    const chartUrl=SB_URL+'/rest/v1/'+histTable+'?select='+idCol+',score,recorded_at&recorded_at=gte.'+fromStr+'T00:00:00Z&recorded_at=lte.'+toStr+'T23:59:59Z&order=recorded_at.asc';
     const pageSize=1000;
     let offset=0;
     while(true){
@@ -699,12 +724,16 @@ async function renderChart() {
       offset+=pageSize;
     }
     console.log('Chart rows:',histRows.length,'from:',fromStr,'to:',toStr);
-  }catch(e){console.warn('Chart error:',e);return;}
+  }catch(e){
+    console.warn('Chart error:',e);
+    showChartEmpty('Could not load chart data','Please try again later.');
+    return;
+  }
 
   // Build sparklines per show
   const sparklineMap={};
   histRows.forEach(row=>{
-    const id=String(row.show_id);
+    const id=String(row[idCol]);
     const day=fmtDate(new Date(row.recorded_at));
     if(!sparklineMap[id]) sparklineMap[id]={};
     if(!sparklineMap[id][day]) sparklineMap[id][day]=[];
@@ -719,19 +748,20 @@ async function renderChart() {
   renderPanel();
 
   // Build per-genre daily averages using SHOWS lookup
+  const currentTabData=mainTab==='shows'?SHOWS:mainTab==='artists'?ARTISTS:EVENTS;
   const showIdToGenreMap={};
-  SHOWS.forEach(r=>{ showIdToGenreMap[String(r.id)]=r.genre; });
+  currentTabData.forEach(r=>{ showIdToGenreMap[String(r.id)]=r.genre; });
 
   const allDays=new Set();
   histRows.forEach(row=>allDays.add(fmtDate(new Date(row.recorded_at))));
   const sortedDays=[...allDays].sort();
-  if(!sortedDays.length) return;
+  if(!sortedDays.length){showChartEmpty('No data for '+(mainTab==='artists'?'Who\u2019s Trending':mainTab==='events'?'Drama Events':'Now Trending'),'No search activity recorded for this period yet.');return;}
 
   const genreData={};
   topGenres.forEach(g=>{genreData[g.code]={};});
 
   histRows.forEach(row=>{
-    const id=String(row.show_id);
+    const id=String(row[idCol]);
     const day=fmtDate(new Date(row.recorded_at));
     const genre=showIdToGenreMap[id];
     if(!genre||!genreData[genre]) return;
@@ -764,6 +794,9 @@ async function renderChart() {
     };
   });
 
+  const hasAnyData=fullDatasets.some(d=>d.data.some(v=>v!==null));
+  if(!hasAnyData){showChartEmpty('No data for '+(mainTab==='artists'?'Who\u2019s Trending':mainTab==='events'?'Drama Events':'Now Trending'),'No search activity recorded for this period yet.');return;}
+
   const fmtAxisLabel=function(s){
     const d2=new Date(s+'T00:00:00');
     if(cfg.days<=3) return d2.toLocaleString('en-SG',{weekday:'short',day:'numeric',month:'short'});
@@ -782,6 +815,10 @@ async function renderChart() {
       }
     }
   });
+ } catch(err) {
+  console.error('renderChart error:',err);
+  showChartEmpty('Chart error',String(err.message||err));
+ }
 }
 
 
