@@ -14,7 +14,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests simplejustwatchapi
+        run: pip install requests
 
       - name: Run fix_platforms.py
         env:
