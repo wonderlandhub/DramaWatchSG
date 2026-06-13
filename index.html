@@ -74,7 +74,8 @@ a{text-decoration:none;}
 .gtab.on{background:#1A1A18;color:#fff;border-color:#1A1A18;font-weight:500;box-shadow:inset 0 1px 3px rgba(0,0,0,.25);}
 .gtab-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
 .item-list{padding:0 20px;}
-.item-row{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);}
+.item-row{display:flex;flex-direction:column;gap:6px;padding:14px 0;border-bottom:1px solid var(--border);}
+.row-top{display:flex;align-items:flex-start;gap:12px;}
 .item-row:last-child{border-bottom:none;}
 .item-num{font-size:13px;font-weight:500;color:var(--t3);width:18px;flex-shrink:0;padding-top:9px;}
 .item-flag{width:44px;height:52px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
@@ -98,7 +99,7 @@ a{text-decoration:none;}
 .pp-viu{background:#FFC600;color:#000;} .pp-zee5{background:#673AB7;color:#fff;}
 .pp-youtube{background:#FF0000;color:#fff;} .pp-amazon{background:#FF9900;color:#000;}
 .pp-generic{background:var(--surface2);color:var(--t2);border:1px solid var(--border-med);}
-.item-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;width:80px;padding-top:2px;}
+.item-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;width:96px;padding-top:2px;}
 .score-num{font-size:20px;font-weight:500;color:var(--t1);line-height:1;letter-spacing:-0.5px;}
 .score-lbl{font-size:10px;color:var(--t3);font-family:var(--mono);}
 .spark-wrap{width:72px;height:22px;margin:3px 0 2px;}
@@ -108,7 +109,7 @@ a{text-decoration:none;}
 .trend-dn{font-size:10px;color:#A32D2D;font-weight:500;}
 .trend-st{font-size:10px;color:var(--t3);}
 .ev-list{padding:0 20px;}
-.ev-row{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);}
+.ev-row{display:flex;flex-direction:column;gap:6px;padding:14px 0;border-bottom:1px solid var(--border);}
 .ev-row:last-child{border-bottom:none;}
 .ev-icon{width:50px;height:58px;border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;gap:4px;}
 .ev-body{flex:1;min-width:0;}
@@ -132,6 +133,13 @@ a{text-decoration:none;}
 #page-state{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:var(--font);}
 @keyframes spin{to{transform:rotate(360deg)}}
 .search-sort-wrap{display:flex;align-items:center;gap:8px;}
+.react-row-full{display:flex;gap:6px;justify-content:flex-end;padding-left:0;}
+.react-btn{display:flex;align-items:center;gap:3px;font-size:10px;border:1px solid var(--border-med);background:var(--surface);color:var(--t2);border-radius:12px;padding:2px 8px;cursor:pointer;font-family:var(--font);transition:all .15s;font-weight:500;white-space:nowrap;}
+.react-btn:hover{background:var(--surface2);transform:scale(1.05);}
+.react-btn.on{background:#EAF3DE;border-color:#B8DDA0;color:#27500A;}
+.react-btn .react-icon{font-size:11px;}
+.react-btn .react-count{font-size:9px;font-weight:600;min-width:7px;}
+.react-btn .react-label{font-size:9px;}
 .search-input{font-size:12px;padding:6px 12px 6px 30px;border:1px solid var(--border-med);border-radius:20px;background:var(--surface2);color:var(--t1);font-family:var(--font);outline:none;width:200px;}
 .search-input:focus{border-color:#7F77DD;background:var(--surface);}
 .sort-select{font-size:12px;padding:6px 10px;border:1px solid var(--border-med);border-radius:20px;background:var(--surface2);color:var(--t2);font-family:var(--font);outline:none;cursor:pointer;}
@@ -169,7 +177,7 @@ a{text-decoration:none;}
   .search-input{width:100%!important;}
   .item-row{gap:8px;}
   .item-flag{width:36px;height:44px;font-size:11px;}
-  .item-right{width:64px;}
+  .item-right{width:80px;}
   .spark-wrap{width:56px;}
   .score-num{font-size:17px;}
 }
@@ -355,6 +363,62 @@ function sparkHtml(data, color) {
   return `<div class="spark-wrap"><canvas data-spark='${JSON.stringify(data)}' data-color="${color}" width="72" height="22"></canvas></div>`;
 }
 
+// ── REACTIONS ─────────────────────────────────────────────────────────────
+const REACTION_TYPES=[
+  {emoji:'like',icon:'❤️',iconOff:'🤍',label:'Like'},
+  {emoji:'recommend',icon:'😊',iconOff:'😊',label:'Recommend'},
+];
+let REACTIONS={}; // key "type:id:emoji" -> count
+function reactionKey(type,id,emoji){return type+':'+id+':'+emoji;}
+function getReactedSet(){
+  try{return new Set(JSON.parse(localStorage.getItem('dwsg_reacted')||'[]'));}catch(e){return new Set();}
+}
+function saveReactedSet(set){
+  try{localStorage.setItem('dwsg_reacted',JSON.stringify([...set]));}catch(e){}
+}
+function reactionHtml(type,id){
+  const reactedSet=getReactedSet();
+  return '<div class="react-row-full">'+REACTION_TYPES.map(function(rt){
+    const key=reactionKey(type,id,rt.emoji);
+    const count=REACTIONS[key]||0;
+    const reacted=reactedSet.has(key);
+    const icon=reacted?rt.icon:rt.iconOff;
+    return '<button class="react-btn'+(reacted?' on':'')+'" data-key="'+key+'" onclick="toggleReaction(event,\''+type+'\','+id+',\''+rt.emoji+'\')" title="'+rt.label+'">'
+      +'<span class="react-icon">'+icon+'</span><span class="react-label">'+rt.label+'</span><span class="react-count">'+(count>0?count:'')+'</span></button>';
+  }).join('')+'</div>';
+}
+async function toggleReaction(ev,type,id,emoji){
+  ev.stopPropagation();
+  const btn=ev.currentTarget;
+  const rt=REACTION_TYPES.find(r=>r.emoji===emoji);
+  const key=reactionKey(type,id,emoji);
+  const reacted=getReactedSet();
+  const isOn=reacted.has(key);
+  const delta=isOn?-1:1;
+  REACTIONS[key]=Math.max((REACTIONS[key]||0)+delta,0);
+  if(isOn) reacted.delete(key); else reacted.add(key);
+  saveReactedSet(reacted);
+  btn.classList.toggle('on',!isOn);
+  const iconEl=btn.querySelector('.react-icon');
+  if(iconEl) iconEl.textContent=(!isOn)?rt.icon:rt.iconOff;
+  const countEl=btn.querySelector('.react-count');
+  if(countEl) countEl.textContent=REACTIONS[key]>0?REACTIONS[key]:'';
+  try{
+    await fetch(SB_URL+'/rest/v1/rpc/increment_reaction',{
+      method:'POST',
+      headers:Object.assign({},SB_HEADERS,{'Content-Type':'application/json'}),
+      body:JSON.stringify({p_type:type,p_id:id,p_emoji:emoji,p_delta:delta})
+    });
+  }catch(e){console.warn('reaction error',e);}
+}
+async function loadReactions(){
+  try{
+    const rows=await sbFetch('reactions','select=item_type,item_id,emoji,count');
+    REACTIONS={};
+    rows.forEach(r=>{REACTIONS[reactionKey(r.item_type,r.item_id,r.emoji)]=r.count;});
+  }catch(e){console.warn('loadReactions error',e);}
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────────
 function fmtVol(n) {
   n=Number(n)||0;
@@ -363,9 +427,10 @@ function fmtVol(n) {
   return n>0?String(n):'–';
 }
 function trendLbl(t) {
-  return t==='↑'?'<span class="trend-up">↑ Rising</span>':
-         t==='↓'?'<span class="trend-dn">↓ Fading</span>':
-         '<span class="trend-st">→ Stable</span>';
+  const tip='Compared to yesterday';
+  return t==='↑'?'<span class="trend-up" title="'+tip+'">↑ Rising</span>':
+         t==='↓'?'<span class="trend-dn" title="'+tip+'">↓ Fading</span>':
+         '<span class="trend-st" title="'+tip+'">→ Stable</span>';
 }
 function statusStyle(s) {
   const m={
@@ -377,6 +442,16 @@ function statusStyle(s) {
     'Upcoming':'background:#E0F2FE;color:#0C4A6E;',
   };
   return m[s]||'background:var(--surface2);color:var(--t2);';
+}
+function statusTip(s) {
+  const m={
+    'Viral':'Score \u226580 — very high search interest right now',
+    'Hot':'Score \u226560 — high search interest',
+    'Rising':'Score \u226540 — moderate search interest',
+    'Fading':'Score <40 — low search interest',
+    'Upcoming':'Event has not happened yet',
+  };
+  return m[s]||'';
 }
 const PP_ORDER = ['disney','gmmtv','iqiyi','netflix','viu','wetv','youtube','zee5','amazon','ch5','ch8','mewatch'];
 const PP = {
@@ -889,6 +964,7 @@ function renderShows() {
     const trend=getTrend(s);
     const plats=Array.isArray(s.platforms)?s.platforms:[];
     return `<div class="item-row">
+      <div class="row-top">
       <div class="item-num">${i+1}</div>
       <div class="item-flag" style="background:${gs.bg};color:${gs.bc};">${s.genre?.substring(0,2).toUpperCase()||'??'}</div>
       <div class="item-body">
@@ -907,9 +983,10 @@ function renderShows() {
         <div class="score-num">${score}</div>
         <div class="score-lbl">score</div>
         ${sparkHtml((window.currentSparklines&&window.currentSparklines[String(s.id)])||s.sparkline,gs.bc)}
-        <span class="sbadge" style="${statusStyle(status)}">${status}</span>
         ${trendLbl(trend)}
       </div>
+      </div>
+      ${reactionHtml('show',s.id)}
     </div>`;
   }).join('')}</div>`;
   requestAnimationFrame(drawAllSparks);
@@ -930,6 +1007,7 @@ function renderEvents() {
     const trend=getTrend(e);
     const links=typeof e.links==='string'?JSON.parse(e.links||'[]'):(e.links||[]);
     return `<div class="ev-row">
+      <div class="row-top">
       <div class="ev-icon" style="background:${gs.bg};">
         <div style="font-size:18px;">${EV_ICONS[e.type]||'📌'}</div>
         <div style="font-size:9px;font-weight:500;color:${gs.bc};text-align:center;padding:0 3px;line-height:1.3;">${e.event_date||''}</div>
@@ -948,9 +1026,10 @@ function renderEvents() {
         <div class="score-num">${score}</div>
         <div class="score-lbl">buzz</div>
         ${sparkHtml((window.currentSparklines&&window.currentSparklines[String(e.id)])||e.sparkline,gs.bc)}
-        <span class="sbadge" style="${statusStyle(status)}">${status}</span>
         ${trendLbl(trend)}
       </div>
+      </div>
+      ${reactionHtml('event',e.id)}
     </div>`;
   }).join('')}</div>`;
   requestAnimationFrame(drawAllSparks);
@@ -979,8 +1058,9 @@ function renderArtists() {
         <div class="artist-sub">${a.role||'Actor'}</div>
         <div class="item-meta" style="margin-top:3px;"><span class="cat-pill" style="${gs.gps}">${gs.label}</span></div>
         ${a.show_name?`<div class="artist-show">${a.show_name}</div>`:''}
+        ${reactionHtml('artist',a.id)}
       </div>
-      <div class="item-right" style="width:80px;flex-shrink:0;">
+      <div class="item-right" style="width:96px;flex-shrink:0;">
         <div class="score-num">${score}</div>
         <div class="score-lbl">score</div>
         ${sparkHtml((window.currentSparklines&&window.currentSparklines[String(a.id)])||a.sparkline,gs.bc)}
@@ -1084,6 +1164,7 @@ async function loadLiveData() {
       sbFetch('events_scores','select=*&order=score_3m.desc'),
     ]);
     GENRES=genreRows;SHOWS=showRows;ARTISTS=artistRows;EVENTS=eventRows;
+    await loadReactions();
     console.log(`✅ Loaded: ${SHOWS.length} shows, ${ARTISTS.length} artists, ${EVENTS.length} events, ${GENRES.length} genres`);
     const lastRow=showRows[0];
     if(lastRow?.last_recorded_sgt) {
