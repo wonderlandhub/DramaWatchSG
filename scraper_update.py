@@ -346,11 +346,24 @@ def main():
                         tmdb["description"] = wiki.get("description","")
                     gc = tmdb.get("genre_code", genre_code)
                     gid = genre_map.get(gc) or genre_map.get("others")
+                    platforms = tmdb.get("platforms", [])
+                    if not platforms:
+                        # TMDB has no SG provider data — use genre-based default
+                        # so the show isn't left with empty platforms forever
+                        GENRE_PLATFORM_FALLBACK = {
+                            "kdrama":  ["viu"],
+                            "cdrama":  ["wetv", "iqiyi"],
+                            "thai":    ["viu", "gmmtv"],
+                            "local":   ["mewatch"],
+                            "western": ["netflix"],
+                            "others":  ["viu"],
+                        }
+                        platforms = GENRE_PLATFORM_FALLBACK.get(gc, ["viu"])
                     row = {
                         "name":          query,
                         "chinese_title": tmdb.get("chinese_title"),
                         "genre_id":      gid,
-                        "platforms":     tmdb.get("platforms",[]),
+                        "platforms":     platforms,
                         "description":   tmdb.get("description",""),
                         "search_term":   tmdb.get("search_term", query),
                         "tmdb_id":       tmdb.get("tmdb_id"),
