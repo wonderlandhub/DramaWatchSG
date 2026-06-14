@@ -16,7 +16,7 @@ JW_TO_PP = {
     "mewatch": "mewatch", "zee5": "zee5",
 }
 GENRE_FALLBACK = {
-    "kdrama": ["viu"], "cdrama": ["wetv","iqiyi"], "thai": ["viu","gmmtv"],
+    "kdrama": ["viu"], "cdrama": ["wetv","iqiyi"], "thai": ["viu"],
     "local": ["mewatch"], "western": ["netflix"], "others": ["viu"],
 }
 
