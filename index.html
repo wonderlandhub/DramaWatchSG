@@ -420,7 +420,7 @@ function socialLinksHtml(type,name,plats){
     return '<a class="social-btn" href="'+p.url(q)+'" target="_blank" title="Search for \''+name+'\' on '+p.label+'">'+p.label+'</a>';
   }).join('');
   const watchRow=(type==='show'||type==='event')?watchOnHtml(plats,name):'';
-  return watchRow+'<span class="social-label">🔍 Search:</span>'+links+'<span class="social-label">💬 React:</span>';
+  return watchRow+'<span class="social-label">🔍 Search:</span>'+links+'<span class="social-label">✨ React:</span>';
 }
 async function toggleReaction(ev,type,id,emoji){
   ev.stopPropagation();
@@ -458,6 +458,10 @@ async function loadReactions(){
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
+function fmtNum(n){
+  n=Number(n)||0;
+  return n>=1000?n.toLocaleString('en-SG'):String(Math.round(n));
+}
 function fmtVol(n) {
   n=Number(n)||0;
   if(n>=1000000) return (n/1000000).toFixed(1)+'M';
@@ -496,7 +500,7 @@ const PP = {
   netflix: {l:'Netflix',   c:'pp-netflix', u:function(){return 'https://www.netflix.com/sg';}},
   disney:  {l:'Disney+',   c:'pp-disney',  u:function(){return 'https://www.disneyplus.com/en-sg';}},
   amazon:  {l:'Prime',     c:'pp-amazon',  u:function(){return 'https://www.primevideo.com';}},
-  viu:     {l:'Viu',       c:'pp-viu',     u:function(q){return 'https://www.viu.com/ott/sg/en/search?q='+q;}},
+  viu:     {l:'Viu',       c:'pp-viu',     u:function(){return 'https://www.viu.com/ott/sg';}},
   wetv:    {l:'WeTV',      c:'pp-wetv',    u:function(q){return 'https://wetv.vip/en/search?q='+q;}},
   iqiyi:   {l:'iQIYI',     c:'pp-iqiyi',   u:function(q){return 'https://www.iq.com/search?query='+q+'&lang=en_us';}},
   mewatch: {l:'meWatch',   c:'pp-mewatch', u:function(q){return 'https://www.mewatch.sg/search?q='+q;}},
@@ -639,9 +643,9 @@ function renderKPI() {
 
   // Update 3 KPI cards
   const kiEl=document.getElementById('kpi-index');
-  if(kiEl) kiEl.innerHTML='<div class="kpi-label">📊 Search index <span style="font-size:10px;cursor:help;" title="Relative popularity score from Google Trends SG.">ⓘ</span></div>'
-    +'<div class="kpi-val">'+(totalScore>0?Math.round(totalScore):'–')+'</div>'
-    +'<div class="kpi-sub kpi-up">'+periodLabel()+'</div>';
+  if(kiEl) kiEl.innerHTML='<div class="kpi-label">📊 Search index <span style="font-size:10px;cursor:help;" title="Relative popularity score from Google Trends SG. 100 = peak search interest.">ⓘ</span></div>'
+    +'<div class="kpi-val">'+(totalScore>0?fmtNum(totalScore):'–')+'</div>'
+    +'<div style="margin-top:4px;"><div style="height:4px;background:var(--surface2);border-radius:3px;overflow:hidden;"><div style="height:4px;border-radius:3px;background:linear-gradient(90deg,#7F77DD,#E24B4A);width:'+Math.min(Math.round(totalScore/10),100)+'%;"></div></div><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--t3);margin-top:2px;"><span>0</span><span>'+periodLabel()+'</span><span>1000+</span></div></div>';
 
   const kgEl=document.getElementById('kpi-genre');
   if(kgEl) kgEl.innerHTML='<div class="kpi-label">🎭 '+l1+'</div>'
@@ -1136,10 +1140,15 @@ function renderMovers() {
     const border=isRising?'#B8E0D4':'#F5C6C6';
     return `<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:${bg};border:1px solid ${border};"><span style="font-size:11px;font-weight:600;color:${color};">${arrow}</span><span style="font-size:11px;font-weight:500;color:var(--t1);">${name}</span><span style="font-size:10px;color:${color};font-weight:500;">${delta}</span></div>`;
   };
-  let html=`<span style="font-size:10px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;">Movers</span>`;
+  let html='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+    +'<span style="font-size:13px;">📈</span>'
+    +'<span style="font-size:12px;font-weight:700;color:var(--t1);">Biggest movers</span>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;">';
   if(rising.length) html+=rising.map(r=>moverPill(r,true)).join('');
   if(rising.length&&falling.length) html+=`<span style="color:var(--border-med);font-size:14px;">|</span>`;
   if(falling.length) html+=falling.map(r=>moverPill(r,false)).join('');
+  html+='</div>';
   strip.innerHTML=html;
 }
 
