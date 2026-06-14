@@ -364,7 +364,7 @@ def main():
                         GENRE_PLATFORM_FALLBACK = {
                             "kdrama":  ["viu"],
                             "cdrama":  ["wetv", "iqiyi"],
-                            "thai":    ["viu", "gmmtv"],
+                            "thai":    ["viu"],
                             "local":   ["mewatch"],
                             "western": ["netflix"],
                             "others":  ["viu"],
