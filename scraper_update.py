@@ -68,7 +68,84 @@ RSS_FEEDS = [
     "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10416",
     "https://mothership.sg/feed/",
     "https://8world.com/rss",
+    "https://www.asiaone.com/rss/entertainment",
+    "https://www.straitstimes.com/news/life/rss.xml",
+    "https://www.soompi.com/feed",
 ]
+
+# Keywords that signal an SG event in an RSS article
+EVENT_RSS_KEYWORDS = [
+    "singapore", "fan meet", "fan meeting", "concert", "showcase",
+    "pop-up", "pop up", "premiere", "screening", "press conference",
+    "media call", "brand event", "fan sign", "fan party", "meet and greet",
+    "fansign", "tour", "appearance", "visit", "touch down", "touches down",
+    "lands in", "arrives in", "coming to singapore", "in singapore",
+]
+EVENT_TYPE_MAP = {
+    "fan meet": "Fan Meet", "fan meeting": "Fan Meet", "fansign": "Fan Meet",
+    "fan sign": "Fan Meet", "meet and greet": "Fan Meet", "fan party": "Fan Party",
+    "concert": "Concert", "showcase": "Showcase", "pop-up": "Pop-Up",
+    "pop up": "Pop-Up", "premiere": "Premiere", "screening": "Screening",
+    "press conference": "Event", "media call": "Event", "brand event": "Event",
+    "tour": "Concert", "appearance": "Event",
+}
+
+# Artist/show name patterns to detect in RSS articles
+# Built dynamically from masters — see discover_events_from_rss()
+def discover_events_from_rss(entries: list, artists: list, shows: list,
+                               known_events: set, genre_map: dict) -> list:
+    """
+    Scan RSS entries for SG events mentioning known artists/shows.
+    Returns list of (title, search_term, type, description, link, genre_code).
+    """
+    discovered = []
+    # Build lookup of names to check (top artists + shows)
+    names = [(a["name"], genre_map.get(a.get("genre_id",""), "others")) for a in artists[:40]]
+    names += [(s["name"], s.get("genre","others")) for s in shows[:30]]
+
+    for entry in entries:
+        title_text = entry.get("title", "")
+        summary_text = entry.get("summary", "")
+        full_text = (title_text + " " + summary_text).lower()
+        link = entry.get("link", "")
+
+        # Must mention Singapore
+        if "singapore" not in full_text:
+            continue
+        # Must mention at least one event keyword
+        ev_type = None
+        for kw, t in EVENT_TYPE_MAP.items():
+            if kw in full_text:
+                ev_type = t
+                break
+        if not ev_type:
+            continue
+
+        # Check if any known artist/show is mentioned
+        for name, genre_code in names:
+            if len(name) < 4:
+                continue
+            if name.lower() not in full_text:
+                continue
+            # Construct event title from article title
+            event_title = title_text[:100].strip()
+            search_term = f"{name} Singapore"
+            # Skip if already known
+            if event_title.lower() in known_events or search_term.lower() in known_events:
+                continue
+            log.info(f"  RSS event found: '{event_title}' (artist: {name})")
+            discovered.append({
+                "title": event_title,
+                "search_term": search_term,
+                "type": ev_type,
+                "description": summary_text[:500],
+                "link": link,
+                "genre_code": genre_code,
+            })
+            known_events.add(event_title.lower())
+            break  # one event per article
+
+    return discovered
 
 DISCOVERY_TERMS = {
     "shows": [
@@ -473,6 +550,35 @@ def main():
                 log.info(f"  ✅ New event added: {query[:50]}")
             except: pass
         time.sleep(TRENDS_DELAY)
+
+    # ── Step 1c: Discover events from SG entertainment RSS feeds ──────────
+    log.info("--- Step 1c: Discovering events from RSS feeds ---")
+    rss_shows = sb.table("shows_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
+    rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
+    rss_discovered = discover_events_from_rss(
+        rss_entries, rss_artists, rss_shows, known_events, genre_map
+    )
+    for ev in rss_discovered:
+        gid = genre_map.get(ev["genre_code"]) or genre_map.get("others")
+        links = [{"l":"More info","u":ev["link"]}] if ev.get("link") else []
+        row = {
+            "title":          ev["title"],
+            "genre_id":       gid,
+            "type":           ev["type"],
+            "venue":          "Singapore",
+            "event_date":     "",
+            "description":    ev["description"],
+            "links":          json.dumps(links),
+            "search_term":    ev["search_term"],
+            "has_description": bool(ev["description"].strip()),
+            "is_active":      True,
+            "updated_at":     now_utc(),
+        }
+        try:
+            sb.table("events_master").insert(row).execute()
+            log.info(f"  ✅ RSS event added: {ev['title'][:60]}")
+        except Exception as e:
+            log.warning(f"  RSS event insert failed: {e}")
 
     # Reload after discoveries
     shows   = sb.table("shows_master").select("id,name,search_term").eq("is_active",True).execute().data or []
