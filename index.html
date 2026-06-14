@@ -369,7 +369,7 @@ function sparkHtml(data, color) {
 
 // ── REACTIONS ─────────────────────────────────────────────────────────────
 const REACTION_TYPES=[
-  {emoji:'like',icon:'❤️',iconOff:'🤍',label:'Like'},
+  {emoji:'like',icon:'<span style="color:#E24B4A;font-size:13px;">&#10084;</span>',iconOff:'<span style="font-size:13px;">🤍</span>',label:'Like'},
   {emoji:'recommend',icon:'😊',iconOff:'😊',label:'Recommend'},
 ];
 let REACTIONS={}; // key "type:id:emoji" -> count
@@ -380,21 +380,28 @@ function getReactedSet(){
 function saveReactedSet(set){
   try{localStorage.setItem('dwsg_reacted',JSON.stringify([...set]));}catch(e){}
 }
-function reactionHtml(type,id,name){
+function reactionHtml(type,id,name,plats){
   const reactedSet=getReactedSet();
   const types=type==='artist'?REACTION_TYPES.filter(rt=>rt.emoji==='like'):REACTION_TYPES;
   const pills=types.map(function(rt){
     const key=reactionKey(type,id,rt.emoji);
     const count=REACTIONS[key]||0;
     const reacted=reactedSet.has(key);
-    const icon=reacted?rt.icon:rt.iconOff;
+    const icon=reacted?rt.icon:(rt.emoji==='like'&&count>0?rt.icon:rt.iconOff);
     return '<button class="react-btn'+(reacted?' on':'')+'" data-key="'+key+'" onclick="toggleReaction(event,\''+type+'\','+id+',\''+rt.emoji+'\')" title="'+rt.label+'">'
       +'<span class="react-icon">'+icon+'</span><span class="react-label">'+rt.label+'</span><span class="react-count">'+(count>0?count:'')+'</span></button>';
   }).join('');
-  const social=name?socialLinksHtml(type,name):'';
+  const social=name?socialLinksHtml(type,name,plats||[]):'';
   return '<div class="react-row-full">'+social+pills+'</div>';
 }
 
+// Watch on row (shows only)
+function watchOnHtml(plats,name){
+  if(!plats||!plats.length) return '';
+  const pills=mkPills(plats,name);
+  if(!pills) return '';
+  return '<span class="social-label">📺 Watch on:</span>'+pills;
+}
 // Search-query variant per item type
 function socialQuery(type,name){
   if(type==='show')   return name+' drama';
@@ -407,12 +414,13 @@ const SOCIAL_PLATFORMS=[
   {key:'reddit',  label:'Reddit',  url:q=>'https://www.reddit.com/search/?q='+q},
   {key:'naver',   label:'Naver',   url:q=>'https://search.naver.com/search.naver?query='+q},
 ];
-function socialLinksHtml(type,name){
+function socialLinksHtml(type,name,plats){
   const q=encodeURIComponent(socialQuery(type,name));
   const links=SOCIAL_PLATFORMS.map(function(p){
     return '<a class="social-btn" href="'+p.url(q)+'" target="_blank" title="Search for \''+name+'\' on '+p.label+'">'+p.label+'</a>';
   }).join('');
-  return '<span class="social-label">🔍 Search:</span>'+links+'<span class="social-label">💬 React:</span>';
+  const watchRow=(type==='show'||type==='event')?watchOnHtml(plats,name):'';
+  return watchRow+'<span class="social-label">🔍 Search:</span>'+links+'<span class="social-label">💬 React:</span>';
 }
 async function toggleReaction(ev,type,id,emoji){
   ev.stopPropagation();
@@ -427,7 +435,10 @@ async function toggleReaction(ev,type,id,emoji){
   saveReactedSet(reacted);
   btn.classList.toggle('on',!isOn);
   const iconEl=btn.querySelector('.react-icon');
-  if(iconEl) iconEl.textContent=(!isOn)?rt.icon:rt.iconOff;
+  if(iconEl){
+    const newCount=REACTIONS[key]||0;
+    iconEl.innerHTML=(!isOn)?rt.icon:(rt.emoji==='like'&&newCount>0?rt.icon:rt.iconOff);
+  }
   const countEl=btn.querySelector('.react-count');
   if(countEl) countEl.textContent=REACTIONS[key]>0?REACTIONS[key]:'';
   try{
@@ -480,27 +491,33 @@ function statusTip(s) {
   };
   return m[s]||'';
 }
-const PP_ORDER = ['disney','gmmtv','iqiyi','netflix','viu','wetv','youtube','zee5','amazon','ch5','ch8','mewatch'];
+const PP_ORDER = ['netflix','disney','amazon','viu','wetv','iqiyi','mewatch','zee5','viki','youtube'];
 const PP = {
-  netflix:{l:'Netflix',c:'pp-netflix',u:'https://www.netflix.com/sg'},
-  disney:{l:'Disney+',c:'pp-disney',u:'https://www.disneyplus.com/en-sg'},
-  wetv:{l:'WeTV',c:'pp-wetv',u:'https://wetv.vip/en'},
-  iqiyi:{l:'iQIYI',c:'pp-iqiyi',u:'https://www.iqiyi.com/intl/sg'},
-  mewatch:{l:'meWatch',c:'pp-mewatch',u:'https://www.mewatch.sg'},
-  gmmtv:{l:'GMMTV',c:'pp-gmmtv',u:'https://www.youtube.com/@GMMTV'},
-  ch8:{l:'Channel 8',c:'pp-ch8',u:'https://www.mewatch.sg/channel8'},
-  ch5:{l:'Channel 5',c:'pp-ch5',u:'https://www.mewatch.sg/channel5'},
-  viu:{l:'Viu',c:'pp-viu',u:'https://www.viu.com'},
-  zee5:{l:'ZEE5',c:'pp-zee5',u:'https://www.zee5.com'},
-  youtube:{l:'YouTube',c:'pp-youtube',u:'https://www.youtube.com'},
-  amazon:{l:'Prime Video',c:'pp-amazon',u:'https://www.primevideo.com'},
+  netflix: {l:'Netflix',   c:'pp-netflix', u:function(){return 'https://www.netflix.com/sg';}},
+  disney:  {l:'Disney+',   c:'pp-disney',  u:function(){return 'https://www.disneyplus.com/en-sg';}},
+  amazon:  {l:'Prime',     c:'pp-amazon',  u:function(){return 'https://www.primevideo.com';}},
+  viu:     {l:'Viu',       c:'pp-viu',     u:function(q){return 'https://www.viu.com/ott/sg/en/search?q='+q;}},
+  wetv:    {l:'WeTV',      c:'pp-wetv',    u:function(q){return 'https://wetv.vip/en/search?q='+q;}},
+  iqiyi:   {l:'iQIYI',     c:'pp-iqiyi',   u:function(q){return 'https://www.iq.com/search?query='+q+'&lang=en_us';}},
+  mewatch: {l:'meWatch',   c:'pp-mewatch', u:function(q){return 'https://www.mewatch.sg/search?q='+q;}},
+  zee5:    {l:'ZEE5',      c:'pp-zee5',    u:function(q){return 'https://www.zee5.com/search?q='+q;}},
+  viki:    {l:'Viki',      c:'pp-generic', u:function(q){return 'https://www.viki.com/explore?q='+q;}},
+  youtube: {l:'YouTube',   c:'pp-youtube', u:function(q){return 'https://www.youtube.com/results?search_query='+q;}},
 };
-function mkPills(plats) {
+function mkPills(plats,name) {
   if(!plats||!plats.length) return '';
+  const q=encodeURIComponent(name||'');
   return [...plats]
     .map(k=>String(k).toLowerCase().trim())
+    .filter(k=>PP[k])
     .sort((a,b)=>PP_ORDER.indexOf(a)-PP_ORDER.indexOf(b))
-    .map(k=>{const p=PP[k];return p?`<a href="${p.u}" target="_blank" class="pp ${p.c}">${p.l}</a>`:`<span class="pp pp-generic">${k}</span>`;})
+    .map(function(k){
+      const p=PP[k];
+      const isSearch=p.u.length>0;
+      const href=isSearch?p.u(q):p.u();
+      const tip=isSearch?'Search \''+name+'\' on '+p.l:'Watch on '+p.l;
+      return '<a href="'+href+'" target="_blank" class="pp '+p.c+'" title="'+tip+'">'+p.l+'</a>';
+    })
     .join('');
 }
 function mkLink(l) { return `<a href="${l.u}" target="_blank" class="pp pp-generic">${l.l}</a>`; }
@@ -1004,7 +1021,6 @@ function renderShows() {
         ${s.chinese_title?`<div class="item-cn">${s.chinese_title}</div>`:''}
         ${s.context?`<div class="item-context">${s.context}</div>`:''}
         ${s.description?`<div class="item-desc">${s.description}</div>`:''}
-        ${plats.length?`<div class="pill-row" style="margin-top:6px;">${mkPills(plats)}</div>`:''}
       </div>
       <div class="item-right">
         <div class="score-num">${score}</div>
@@ -1013,7 +1029,7 @@ function renderShows() {
         ${trendLbl(trend)}
       </div>
       </div>
-      ${reactionHtml('show',s.id,s.name)}
+      ${reactionHtml('show',s.id,s.name,plats)}
     </div>`;
   }).join('')}</div>`;
   requestAnimationFrame(drawAllSparks);
@@ -1056,7 +1072,7 @@ function renderEvents() {
         ${trendLbl(trend)}
       </div>
       </div>
-      ${reactionHtml('event',e.id,e.title)}
+      ${reactionHtml('event',e.id,e.title,[])}
     </div>`;
   }).join('')}</div>`;
   requestAnimationFrame(drawAllSparks);
@@ -1085,7 +1101,7 @@ function renderArtists() {
         <div class="artist-sub">${a.role||'Actor'}</div>
         <div class="item-meta" style="margin-top:3px;"><span class="cat-pill" style="${gs.gps}">${gs.label}</span></div>
         ${a.show_name?`<div class="artist-show">${a.show_name}</div>`:''}
-        ${reactionHtml('artist',a.id,a.name)}
+        ${reactionHtml('artist',a.id,a.name,[])}
       </div>
       <div class="item-right" style="width:96px;flex-shrink:0;">
         <div class="score-num">${score}</div>
