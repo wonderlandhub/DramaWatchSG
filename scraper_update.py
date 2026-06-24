@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 import feedparser
 from pytrends.request import TrendReq
 from supabase import create_client
+from discover_shows import discover_from_streaming
 
 load_dotenv()
 logging.basicConfig(
