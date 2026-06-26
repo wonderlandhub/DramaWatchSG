@@ -373,18 +373,28 @@ def discover_shows_from_flixpatrol(sb, genre_map, known_shows):
             "is_active": True, "updated_at": now_utc(),
         }
         try:
-            result = sb.table("shows_master").insert(row).execute()
-            known_shows.add(name.lower())
-            log.info(f"  ✅ Show added: {name} [{gc}]")
-            added += 1
-            # Seed top 2 lead artists for this new show
-            new_id = (result.data or [{}])[0].get("id")
-            seed_lead_artists(sb, genre_map, known_artists, name, meta.get("tmdb_id"), gid)
-        except Exception as e:
-            if "duplicate" in str(e).lower():
-                known_shows.add(name.lower())
+            # Check if show exists but is inactive — reactivate it
+            existing = sb.table("shows_master").select("id,is_active,tmdb_id") \
+                .eq("name", name).execute().data or []
+            if existing:
+                show_rec = existing[0]
+                if not show_rec.get("is_active"):
+                    sb.table("shows_master").update({
+                        "is_active": True, "updated_at": now_utc()
+                    }).eq("id", show_rec["id"]).execute()
+                    known_shows.add(name.lower())
+                    log.info(f"  🔄 Show reactivated: {name}")
+                else:
+                    known_shows.add(name.lower())
             else:
-                log.warning(f"  Show insert failed '{name}': {e}")
+                # Brand new show — insert and seed artists
+                result = sb.table("shows_master").insert(row).execute()
+                known_shows.add(name.lower())
+                log.info(f"  ✅ Show added: {name} [{gc}]")
+                added += 1
+                seed_lead_artists(sb, genre_map, known_artists, name, meta.get("tmdb_id"), gid)
+        except Exception as e:
+            log.warning(f"  Show insert failed '{name}': {e}")
 
     log.info(f"--- Step 0a: {added} new shows added ---")
 
@@ -795,10 +805,20 @@ def main():
                         "is_active": True, "updated_at": now_utc(),
                     }
                     try:
-                        sb.table("shows_master").insert(row).execute()
+                        existing = sb.table("shows_master").select("id,is_active") \
+                            .eq("name", query).execute().data or []
+                        if existing:
+                            if not existing[0].get("is_active"):
+                                sb.table("shows_master").update({
+                                    "is_active": True, "updated_at": now_utc()
+                                }).eq("id", existing[0]["id"]).execute()
+                                log.info(f"  🔄 Trends show reactivated: {query}")
+                        else:
+                            sb.table("shows_master").insert(row).execute()
+                            log.info(f"  ✅ Trends show added: {query}")
                         known_shows.add(query_lower)
-                        log.info(f"  ✅ Trends show added: {query}")
-                    except: pass
+                    except Exception as e:
+                        log.warning(f"  Trends show insert failed: {e}")
 
                 elif category == "artists" and query_lower not in known_artists:
                     meta = tmdb_search_person(query)
@@ -816,10 +836,20 @@ def main():
                         "is_active": True, "updated_at": now_utc(),
                     }
                     try:
-                        sb.table("artists_master").insert(row).execute()
+                        existing = sb.table("artists_master").select("id,is_active") \
+                            .eq("name", query).execute().data or []
+                        if existing:
+                            if not existing[0].get("is_active"):
+                                sb.table("artists_master").update({
+                                    "is_active": True, "updated_at": now_utc()
+                                }).eq("id", existing[0]["id"]).execute()
+                                log.info(f"  🔄 Trends artist reactivated: {query}")
+                        else:
+                            sb.table("artists_master").insert(row).execute()
+                            log.info(f"  ✅ Trends artist added: {query}")
                         known_artists.add(query_lower)
-                        log.info(f"  ✅ Trends artist added: {query}")
-                    except: pass
+                    except Exception as e:
+                        log.warning(f"  Trends artist insert failed: {e}")
 
             time.sleep(TRENDS_DELAY)
 
