@@ -628,20 +628,21 @@ def get_prev_scores(sb, view, id_field):
         log.warning(f"Could not fetch prev scores from {view}: {e}"); return {}
 
 
-def auto_deactivate_zero_shows(sb):
+def auto_deactivate_shows(sb):
     """
-    Deactivate any show that has scored 0 for 30+ consecutive days.
-    Keeps the active list lean and prevents timeout from scoring dead shows.
+    Deactivation rules for shows:
+    - < 30 days tracked → keep (too early to judge)
+    - 30+ days, ALL scores = 0 → deactivate (no search interest at all)
+    - 30+ days, avg score < 1.5 → deactivate (not enough SG interest)
+    - Will be reactivated automatically if show returns to FlixPatrol/Trends
     """
-    log.info("--- Auto-deactivating zero-score shows ---")
+    log.info("--- Auto-deactivating shows ---")
     try:
-        # Get all active shows with their recent history
         shows = sb.table("shows_master").select("id,name").eq("is_active", True).execute().data or []
         deactivated = 0
 
         for show in shows:
             sid = show["id"]
-            # Get last 14 days of scores
             history = sb.table("shows_history") \
                 .select("score,recorded_at") \
                 .eq("show_id", sid) \
@@ -649,27 +650,40 @@ def auto_deactivate_zero_shows(sb):
                 .limit(30) \
                 .execute().data or []
 
-            # Only deactivate if we have 14+ days AND all are zero
-            if len(history) >= 30 and all(float(h.get("score", 0)) == 0 for h in history):
+            # Too early to judge
+            if len(history) < 30:
+                continue
+
+            scores  = [float(h.get("score", 0)) for h in history]
+            avg     = sum(scores) / len(scores)
+            all_zero = all(s == 0 for s in scores)
+
+            if all_zero or avg < 1.5:
+                reason = "zero scores" if all_zero else f"avg score {avg:.1f} < 1.5"
                 sb.table("shows_master").update({
                     "is_active": False, "updated_at": now_utc()
                 }).eq("id", sid).execute()
-                log.info(f"  Deactivated zero-score show: {show['name']}")
+                log.info(f"  Deactivated show: {show['name']} ({reason})")
                 deactivated += 1
 
-        log.info(f"--- Auto-deactivated {deactivated} zero-score shows ---")
+        log.info(f"--- Auto-deactivated {deactivated} shows ---")
     except Exception as e:
-        log.warning(f"Auto-deactivate error: {e}")
+        log.warning(f"Auto-deactivate shows error: {e}")
 
 
-def auto_deactivate_zero_artists(sb):
+def auto_deactivate_artists(sb):
     """
-    Deactivate any artist that has scored 0 for 30+ consecutive days.
+    Deactivation rules for artists:
+    - < 30 days tracked → keep (too early to judge)
+    - 30+ days, ALL scores = 0 → deactivate
+    - 30+ days, avg score < 1.5 → deactivate
+    - Will be reactivated automatically if artist returns to Trends
     """
-    log.info("--- Auto-deactivating zero-score artists ---")
+    log.info("--- Auto-deactivating artists ---")
     try:
         artists = sb.table("artists_master").select("id,name").eq("is_active", True).execute().data or []
         deactivated = 0
+
         for artist in artists:
             aid = artist["id"]
             history = sb.table("artists_history") \
@@ -678,15 +692,25 @@ def auto_deactivate_zero_artists(sb):
                 .order("recorded_at", desc=True) \
                 .limit(30) \
                 .execute().data or []
-            if len(history) >= 30 and all(float(h.get("score", 0)) == 0 for h in history):
+
+            if len(history) < 30:
+                continue
+
+            scores   = [float(h.get("score", 0)) for h in history]
+            avg      = sum(scores) / len(scores)
+            all_zero = all(s == 0 for s in scores)
+
+            if all_zero or avg < 1.5:
+                reason = "zero scores" if all_zero else f"avg score {avg:.1f} < 1.5"
                 sb.table("artists_master").update({
                     "is_active": False, "updated_at": now_utc()
                 }).eq("id", aid).execute()
-                log.info(f"  Deactivated zero-score artist: {artist['name']}")
+                log.info(f"  Deactivated artist: {artist['name']} ({reason})")
                 deactivated += 1
-        log.info(f"--- Auto-deactivated {deactivated} zero-score artists ---")
+
+        log.info(f"--- Auto-deactivated {deactivated} artists ---")
     except Exception as e:
-        log.warning(f"Auto-deactivate artist error: {e}")
+        log.warning(f"Auto-deactivate artists error: {e}")
 
 
 def seed_lead_artists(sb, genre_map, known_artists, new_show_name, tmdb_id, genre_id):
@@ -879,8 +903,8 @@ def main():
     events  = sb.table("events_master").select("id,title,search_term").eq("is_active", True).execute().data or []
 
     # ── Auto-deactivate zero-score shows + artists ───────────────────────
-    auto_deactivate_zero_shows(sb)
-    auto_deactivate_zero_artists(sb)
+    auto_deactivate_shows(sb)
+    auto_deactivate_artists(sb)
 
     # Reload after deactivation
     shows = sb.table("shows_master").select("id,name,search_term").eq("is_active", True).execute().data or []
