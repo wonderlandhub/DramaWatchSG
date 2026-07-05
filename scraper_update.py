@@ -95,10 +95,6 @@ EVENT_TYPE_MAP = {
 
 def discover_events_from_rss(entries: list, artists: list, shows: list,
                               known_events: set, genre_map: dict) -> list:
-    """
-    Scan RSS entries for SG events mentioning known artists/shows.
-    Returns list of (title, search_term, type, description, link, genre_code).
-    """
     discovered = []
     names = [(a["name"], genre_map.get(a.get("genre_id",""), "others")) for a in artists[:40]]
     names += [(s["name"], s.get("genre","others")) for s in shows[:30]]
@@ -220,26 +216,24 @@ def is_movie_title(name: str) -> bool:
         tv_hits    = tv_res.json().get("results", [])    if tv_res.ok    else []
 
         if not movie_hits:
-            return False  # not a known movie title at all
+            return False
 
-        # Check if the top movie result closely matches the query name
         top_movie_title = movie_hits[0].get("title", "").lower()
         name_lower      = name.lower()
         if name_lower not in top_movie_title and top_movie_title not in name_lower:
-            return False  # different movie, not a match for this query
+            return False
 
-        # If TV also has a strong match, let tmdb_search_show() decide
         if tv_hits:
             top_tv_name = tv_hits[0].get("name", "").lower()
             if name_lower in top_tv_name or top_tv_name in name_lower:
-                return False  # ambiguous — could be both; let TV check handle it
+                return False  # ambiguous — let tmdb_search_show() decide
 
         log.info(f"  ⏭  '{name}' identified as movie title — skipping")
         return True
 
     except Exception as e:
         log.warning(f"is_movie_title error '{name}': {e}")
-        return False  # fail open — let normal flow decide
+        return False
 
 
 def tmdb_search_show(name: str) -> dict:
@@ -262,10 +256,10 @@ def tmdb_search_show(name: str) -> dict:
 
         d = detail.json()
 
-        # ── Guard: reject anything with no real TV series structure ──────────
+        # ── FIX 1 GUARD: reject anything with no real TV series structure ──
         num_seasons  = d.get("number_of_seasons") or 0
         num_episodes = d.get("number_of_episodes") or 0
-        media_type   = d.get("type", "")  # e.g. "Scripted", "Reality", "Miniseries", "Movie"
+        media_type   = d.get("type", "")
 
         if num_seasons == 0 or num_episodes == 0:
             log.info(f"  ⏭  Skipping '{name}' — no TV series structure "
@@ -275,7 +269,7 @@ def tmdb_search_show(name: str) -> dict:
         if media_type.lower() == "movie":
             log.info(f"  ⏭  Skipping '{name}' — TMDB type=movie")
             return {}
-        # ── End guard ─────────────────────────────────────────────────────────
+        # ── END GUARD ─────────────────────────────────────────────────────
 
         sg = d.get("watch/providers",{}).get("results",{}).get("SG",{})
         platforms = []
@@ -404,27 +398,14 @@ def fetch_related_queries(pytrends, term: str) -> list:
 
 
 def fetch_yesterday_score(pytrends, term: str) -> float:
-    """
-    Fetch yesterday's complete daily Google Trends score for a term in SG.
-    Uses today 1-m (30 daily points) — consistent with scraper_init.
-    Takes iloc[-2] = yesterday's full day score.
-    iloc[-1] = today which is incomplete at midnight run time.
-    """
     try:
         pytrends.build_payload([term], geo="SG", timeframe="today 1-m")
         df = pytrends.interest_over_time()
         if df.empty or term not in df.columns: return 0.0
         if len(df) < 2: return float(df[term].iloc[-1])
-        return float(df[term].iloc[-2])  # yesterday's complete daily score
+        return float(df[term].iloc[-2])
     except Exception as e:
         log.warning(f"Score error '{term}': {e}"); return 0.0
-
-
-def normalise(scores: dict) -> dict:
-    """Normalise {name: raw_score} to 0-100 within the set."""
-    if not scores: return scores
-    mx = max(scores.values()) or 1
-    return {k: round((v/mx)*100, 1) for k,v in scores.items()}
 
 
 def score_to_status(score: float, prev: float = None) -> str:
@@ -449,10 +430,7 @@ def build_sparkline(prev_sparkline: list, new_score: float) -> list:
     return history
 
 
-# ── GET PREVIOUS SCORES FROM VIEWS ────────────────────────────────────────
-
 def get_prev_scores(sb, view: str, id_field: str) -> dict:
-    """Get latest score + sparkline per item from view."""
     try:
         res = sb.table(view).select(f"{id_field},score_today,sparkline").execute()
         return {
@@ -486,8 +464,11 @@ def main():
     events  = sb.table("events_master").select("id,title,search_term,event_date").eq("is_active",True).execute().data or []
     log.info(f"Active: {len(shows)} shows, {len(artists)} artists, {len(events)} events")
 
+    # FIX 2: also index search_term so renamed shows aren't re-discovered
     known_shows   = {s["name"].lower() for s in shows}
+    known_shows  |= {s["search_term"].lower() for s in shows if s.get("search_term")}
     known_artists = {a["name"].lower() for a in artists}
+    known_artists |= {a["search_term"].lower() for a in artists if a.get("search_term")}
     known_events  = {e["title"].lower() for e in events}
 
     # ── STEP 1: Discover new items ────────────────────────────────────────
@@ -505,22 +486,23 @@ def main():
                 if category == "shows" and query_lower not in known_shows:
                     log.info(f"  New show candidate: '{query}'")
 
-                    # ── Movie filter: skip if TMDB identifies this as a movie ──
+                    # Pre-filter: skip if TMDB identifies this as a movie
                     if is_movie_title(query):
                         continue
 
                     tmdb = tmdb_search_show(query)
+
+                    # FIX 1: skip if TMDB returned nothing (movie, no seasons, etc.)
                     if not tmdb:
-                        # tmdb_search_show returns {} for movies / no-episode titles
-                        log.info(f"  ⏭  '{query}' — no valid TV result from TMDB, skipping")
+                        log.info(f"  ⏭  '{query}' — no valid TV result, skipping")
                         continue
 
                     if not tmdb.get("description"):
                         wiki = wiki_lookup(query)
                         tmdb["description"] = wiki.get("description","")
 
-                    gc       = tmdb.get("genre_code", genre_code)
-                    gid      = genre_map.get(gc) or genre_map.get("others")
+                    gc        = tmdb.get("genre_code", genre_code)
+                    gid       = genre_map.get(gc) or genre_map.get("others")
                     platforms = tmdb.get("platforms", [])
 
                     if not platforms:
@@ -550,7 +532,9 @@ def main():
                         sb.table("shows_master").insert(row).execute()
                         known_shows.add(query_lower)
                         log.info(f"  ✅ New show added: {query}")
-                    except: pass
+                    except Exception as e:
+                        # FIX 3: log insert errors instead of silently swallowing them
+                        log.warning(f"  ❌ Show insert failed '{query}': {e}")
 
                 elif category == "artists" and query_lower not in known_artists:
                     log.info(f"  New artist candidate: '{query}'")
@@ -572,7 +556,8 @@ def main():
                         sb.table("artists_master").insert(row).execute()
                         known_artists.add(query_lower)
                         log.info(f"  ✅ New artist added: {query}")
-                    except: pass
+                    except Exception as e:
+                        log.warning(f"  ❌ Artist insert failed '{query}': {e}")
 
                 elif category == "events" and query_lower not in known_events:
                     log.info(f"  New event candidate: '{query}'")
@@ -597,16 +582,16 @@ def main():
                         sb.table("events_master").insert(row).execute()
                         known_events.add(query_lower)
                         log.info(f"  ✅ New event added: {query[:50]}")
-                    except: pass
+                    except Exception as e:
+                        log.warning(f"  ❌ Event insert failed '{query}': {e}")
 
             time.sleep(TRENDS_DELAY)
 
-    # ── Dynamic event discovery: based on top shows/artists + event suffixes ──
+    # ── Dynamic event discovery ───────────────────────────────────────────
     log.info("--- Step 1b: Discovering events from top shows/artists ---")
     sorted_artists = sorted(artists, key=lambda a: a.get("name",""))
     sorted_shows   = sorted(shows,   key=lambda s: s.get("name",""))
     event_terms    = build_event_terms(sorted_shows, sorted_artists)
-    genre_code     = "others"
 
     for term in event_terms:
         queries = fetch_related_queries(pytrends, term)
@@ -616,7 +601,7 @@ def main():
                 continue
             log.info(f"  New event candidate: '{query}'")
             rss  = enrich_event_from_rss(query, rss_entries)
-            gid  = genre_map.get(genre_code) or genre_map.get("others")
+            gid  = genre_map.get("others")
             links = [{"l":"More info","u":rss["link"]}] if rss.get("link") else []
             row = {
                 "title":         query,
@@ -635,10 +620,11 @@ def main():
                 sb.table("events_master").insert(row).execute()
                 known_events.add(query_lower)
                 log.info(f"  ✅ New event added: {query[:50]}")
-            except: pass
+            except Exception as e:
+                log.warning(f"  ❌ Event insert failed '{query}': {e}")
         time.sleep(TRENDS_DELAY)
 
-    # ── Step 1c: Discover events from SG entertainment RSS feeds ──────────
+    # ── RSS event discovery ───────────────────────────────────────────────
     log.info("--- Step 1c: Discovering events from RSS feeds ---")
     rss_shows   = sb.table("shows_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
     rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
@@ -665,7 +651,7 @@ def main():
             sb.table("events_master").insert(row).execute()
             log.info(f"  ✅ RSS event added: {ev['title'][:60]}")
         except Exception as e:
-            log.warning(f"  RSS event insert failed: {e}")
+            log.warning(f"  ❌ RSS event insert failed: {e}")
 
     # Reload after discoveries
     shows   = sb.table("shows_master").select("id,name,search_term").eq("is_active",True).execute().data or []
@@ -674,7 +660,6 @@ def main():
 
     # ── STEP 2: Score all active items ────────────────────────────────────
     log.info("--- Step 2: Scoring all active items ---")
-
     show_raw, artist_raw, event_raw = {}, {}, {}
 
     log.info("  Scoring shows...")
@@ -698,7 +683,6 @@ def main():
         log.info(f"    {e['title'][:40]}: {event_raw[e['title']]:.1f}")
         time.sleep(TRENDS_DELAY)
 
-    # Normalise across ALL items together
     all_raw   = {**show_raw, **artist_raw, **event_raw}
     max_score = max(all_raw.values()) if all_raw else 1
     if max_score == 0: max_score = 1
@@ -710,17 +694,15 @@ def main():
     artist_norm = normalise_all(artist_raw)
     event_norm  = normalise_all(event_raw)
 
-    # Get previous scores for trend + sparkline
     show_prev   = get_prev_scores(sb, "shows_scores",   "id")
     artist_prev = get_prev_scores(sb, "artists_scores", "id")
     event_prev  = get_prev_scores(sb, "events_scores",  "id")
 
     # ── STEP 3: Append history rows ───────────────────────────────────────
     log.info("--- Step 3: Appending history rows ---")
-
-    sgt          = timezone(timedelta(hours=8))
+    sgt           = timezone(timedelta(hours=8))
     yesterday_sgt = (datetime.now(sgt) - timedelta(days=1)).date()
-    recorded_at  = datetime(
+    recorded_at   = datetime(
         yesterday_sgt.year, yesterday_sgt.month, yesterday_sgt.day,
         4, 0, 0, tzinfo=timezone.utc
     ).isoformat()
@@ -785,7 +767,7 @@ def main():
         sb.table("events_history").insert(event_rows).execute()
         log.info(f"  Inserted {len(event_rows)} event history rows")
 
-    # ── STEP 4: Genre ranking — fixed ─────────────────────────────────────
+    # ── STEP 4: Genre ranking fixed ───────────────────────────────────────
     log.info("--- Step 4: Genre ranking fixed — skipping re-rank ---")
 
     # ── STEP 5: has_description retry via Wikipedia ───────────────────────
@@ -817,10 +799,10 @@ def main():
 
     # ── STEP 6: Deactivate past events ───────────────────────────────────
     log.info("--- Step 6: Deactivating past events ---")
-    now_sgt_date   = datetime.now(timezone(timedelta(hours=8)))
-    current_month  = now_sgt_date.month
-    current_year   = now_sgt_date.year
-    past_months    = [
+    now_sgt_date  = datetime.now(timezone(timedelta(hours=8)))
+    current_month = now_sgt_date.month
+    current_year  = now_sgt_date.year
+    past_months   = [
         datetime(current_year, m, 1).strftime("%b").lower()
         for m in range(1, current_month)
     ]
