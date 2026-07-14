@@ -10,9 +10,9 @@ Flow:
 4. Score all active items — fetch yesterday's Trends data
 5. Normalise 0-100 per category
 6. Append one history row per item
-7. Re-rank genres → update is_top5
-8. has_description retry via Wikipedia
-9. Deactivate past events
+7. has_description retry via Wikipedia
+8. Deactivate past events
+9. Auto-deactivate zero-interest items
 
 Environment variables (GitHub Actions secrets):
   SUPABASE_URL
@@ -29,19 +29,16 @@ from supabase import create_client
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-SUPABASE_URL  = os.environ["SUPABASE_URL"]
-SUPABASE_KEY  = os.environ["SUPABASE_KEY"]
-TMDB_API_KEY  = os.environ["TMDB_API_KEY"]
-TMDB_BASE     = "https://api.themoviedb.org/3"
-WIKI_API      = "https://en.wikipedia.org/api/rest_v1/page/summary"
-WIKI_HEADERS  = {"User-Agent": "DramaWatchSG/1.0"}
-TRENDS_DELAY  = 6
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+TMDB_API_KEY = os.environ["TMDB_API_KEY"]
+TMDB_BASE    = "https://api.themoviedb.org/3"
+WIKI_API     = "https://en.wikipedia.org/api/rest_v1/page/summary"
+WIKI_HEADERS = {"User-Agent": "DramaWatchSG/1.0"}
+TRENDS_DELAY = 6
 
 TMDB_PROVIDER_MAP = {
     8: "netflix", 337: "disney", 96: "iqiyi",
@@ -49,15 +46,6 @@ TMDB_PROVIDER_MAP = {
     290: "youtube", 167: "gmmtv", 232: "zee5",
     119: "amazon",
 }
-
-GENRE_COLORS = [
-    {"dot_color":"#7F77DD","bg_color":"#EEEDFE","text_color":"#3C3489"},
-    {"dot_color":"#D85A30","bg_color":"#FAECE7","text_color":"#993C1D"},
-    {"dot_color":"#1D9E75","bg_color":"#E1F5EE","text_color":"#085041"},
-    {"dot_color":"#BA7517","bg_color":"#FAEEDA","text_color":"#633806"},
-    {"dot_color":"#378ADD","bg_color":"#E6F1FB","text_color":"#0C447C"},
-    {"dot_color":"#9C27B0","bg_color":"#F3E5F5","text_color":"#4A148C"},
-]
 
 GENRE_LABELS = {
     "kdrama":"K-Drama","cdrama":"C-Drama","local":"Local",
@@ -75,14 +63,6 @@ RSS_FEEDS = [
     "https://www.soompi.com/feed",
 ]
 
-EVENT_RSS_KEYWORDS = [
-    "singapore", "fan meet", "fan meeting", "concert", "showcase",
-    "pop-up", "pop up", "premiere", "screening", "press conference",
-    "media call", "brand event", "fan sign", "fan party", "meet and greet",
-    "fansign", "tour", "appearance", "visit", "touch down", "touches down",
-    "lands in", "arrives in", "coming to singapore", "in singapore",
-]
-
 EVENT_TYPE_MAP = {
     "fan meet": "Fan Meet", "fan meeting": "Fan Meet", "fansign": "Fan Meet",
     "fan sign": "Fan Meet", "meet and greet": "Fan Meet", "fan party": "Fan Party",
@@ -91,57 +71,6 @@ EVENT_TYPE_MAP = {
     "press conference": "Event", "media call": "Event", "brand event": "Event",
     "tour": "Concert", "appearance": "Event",
 }
-
-
-def discover_events_from_rss(entries: list, artists: list, shows: list,
-                              known_events: set, genre_map: dict) -> list:
-    discovered = []
-    names = [(a["name"], genre_map.get(a.get("genre_id",""), "others")) for a in artists[:40]]
-    names += [(s["name"], s.get("genre","others")) for s in shows[:30]]
-
-    for entry in entries:
-        title_text   = entry.get("title", "")
-        summary_text = entry.get("summary", "")
-        full_text    = (title_text + " " + summary_text).lower()
-        link         = entry.get("link", "")
-
-        if "singapore" not in full_text:
-            continue
-
-        ev_type = None
-        for kw, t in EVENT_TYPE_MAP.items():
-            if kw in full_text:
-                ev_type = t
-                break
-        if not ev_type:
-            continue
-
-        for name, genre_code in names:
-            if len(name) < 4:
-                continue
-            if name.lower() not in full_text:
-                continue
-
-            event_title = title_text[:100].strip()
-            search_term = f"{name} Singapore"
-
-            if event_title.lower() in known_events or search_term.lower() in known_events:
-                continue
-
-            log.info(f"  RSS event found: '{event_title}' (artist: {name})")
-            discovered.append({
-                "title": event_title,
-                "search_term": search_term,
-                "type": ev_type,
-                "description": summary_text[:500],
-                "link": link,
-                "genre_code": genre_code,
-            })
-            known_events.add(event_title.lower())
-            break
-
-    return discovered
-
 
 DISCOVERY_TERMS = {
     "shows": [
@@ -159,19 +88,9 @@ DISCOVERY_TERMS = {
 }
 
 EVENT_SUFFIXES = [
-    "Singapore concert", "Singapore fan meet", "Singapore tour",
-    "Singapore fan meeting", "Singapore showcase",
+    "Singapore concert","Singapore fan meet","Singapore tour",
+    "Singapore fan meeting","Singapore showcase",
 ]
-
-
-def build_event_terms(shows: list, artists: list, limit: int = 8) -> list:
-    terms = []
-    names = [a["name"] for a in artists[:6]] + [s["name"] for s in shows[:4]]
-    for i, name in enumerate(names):
-        suffix = EVENT_SUFFIXES[i % len(EVENT_SUFFIXES)]
-        terms.append(f"{name} {suffix}")
-    return terms[:limit]
-
 
 TERM_TO_GENRE = {
     "Korean drama":"kdrama","Chinese drama":"cdrama",
@@ -180,6 +99,21 @@ TERM_TO_GENRE = {
     "Turkish drama":"turkish","Indian drama":"indian","drama":"others",
 }
 
+GENRE_PLATFORM_FALLBACK = {
+    "kdrama":["viu"],"cdrama":["wetv","iqiyi"],
+    "thai":["viu"],"local":["mewatch"],
+    "western":["netflix"],"others":["viu"],
+}
+
+
+# ── HELPERS ───────────────────────────────────────────────────────────────
+
+def now_utc() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def now_sgt() -> str:
+    sgt = timezone(timedelta(hours=8))
+    return datetime.now(sgt).strftime("%Y-%m-%d %H:%M SGT")
 
 def term_to_genre_code(term: str) -> str:
     for key, code in TERM_TO_GENRE.items():
@@ -187,50 +121,41 @@ def term_to_genre_code(term: str) -> str:
             return code
     return "others"
 
+def build_event_terms(shows: list, artists: list, limit: int = 8) -> list:
+    names = [a["name"] for a in artists[:6]] + [s["name"] for s in shows[:4]]
+    terms = []
+    for i, name in enumerate(names):
+        suffix = EVENT_SUFFIXES[i % len(EVENT_SUFFIXES)]
+        terms.append(f"{name} {suffix}")
+    return terms[:limit]
 
-def now_utc() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
-
-def now_sgt() -> str:
-    sgt = timezone(timedelta(hours=8))
-    return datetime.now(sgt).strftime("%Y-%m-%d %H:%M SGT")
-
-
-# ── TMDB HELPERS ──────────────────────────────────────────────────────────
+# ── TMDB ──────────────────────────────────────────────────────────────────
 
 def is_movie_title(name: str) -> bool:
-    """
-    Return True if TMDB identifies this as a movie with no matching TV show.
-    Guards against Google Trends surfacing film titles in show discovery.
-    """
+    """Return True if TMDB identifies this as a movie with no matching TV show."""
     try:
         movie_res = requests.get(f"{TMDB_BASE}/search/movie",
-                                 params={"api_key": TMDB_API_KEY, "query": name, "language": "en-SG"},
+                                 params={"api_key":TMDB_API_KEY,"query":name,"language":"en-SG"},
                                  timeout=10)
         tv_res    = requests.get(f"{TMDB_BASE}/search/tv",
-                                 params={"api_key": TMDB_API_KEY, "query": name, "language": "en-SG"},
+                                 params={"api_key":TMDB_API_KEY,"query":name,"language":"en-SG"},
                                  timeout=10)
-
-        movie_hits = movie_res.json().get("results", []) if movie_res.ok else []
-        tv_hits    = tv_res.json().get("results", [])    if tv_res.ok    else []
+        movie_hits = movie_res.json().get("results",[]) if movie_res.ok else []
+        tv_hits    = tv_res.json().get("results",[])    if tv_res.ok    else []
 
         if not movie_hits:
             return False
-
-        top_movie_title = movie_hits[0].get("title", "").lower()
-        name_lower      = name.lower()
-        if name_lower not in top_movie_title and top_movie_title not in name_lower:
+        top_movie = movie_hits[0].get("title","").lower()
+        name_lower = name.lower()
+        if name_lower not in top_movie and top_movie not in name_lower:
             return False
-
         if tv_hits:
-            top_tv_name = tv_hits[0].get("name", "").lower()
-            if name_lower in top_tv_name or top_tv_name in name_lower:
+            top_tv = tv_hits[0].get("name","").lower()
+            if name_lower in top_tv or top_tv in name_lower:
                 return False  # ambiguous — let tmdb_search_show() decide
-
-        log.info(f"  ⏭  '{name}' identified as movie title — skipping")
+        log.info(f"  ⏭  '{name}' identified as movie — skipping")
         return True
-
     except Exception as e:
         log.warning(f"is_movie_title error '{name}': {e}")
         return False
@@ -244,7 +169,7 @@ def tmdb_search_show(name: str) -> dict:
         if not res.ok: return {}
         results = res.json().get("results",[])
         if not results: return {}
-        show = results[0]
+        show    = results[0]
         tmdb_id = show["id"]
 
         detail = requests.get(f"{TMDB_BASE}/tv/{tmdb_id}",
@@ -256,20 +181,16 @@ def tmdb_search_show(name: str) -> dict:
 
         d = detail.json()
 
-        # ── FIX 1 GUARD: reject anything with no real TV series structure ──
+        # ── FIX: reject entries with no real TV series structure ──
         num_seasons  = d.get("number_of_seasons") or 0
         num_episodes = d.get("number_of_episodes") or 0
-        media_type   = d.get("type", "")
-
         if num_seasons == 0 or num_episodes == 0:
-            log.info(f"  ⏭  Skipping '{name}' — no TV series structure "
-                     f"(seasons={num_seasons}, episodes={num_episodes})")
+            log.info(f"  ⏭  '{name}' — no TV structure (seasons={num_seasons}, eps={num_episodes})")
             return {}
-
-        if media_type.lower() == "movie":
-            log.info(f"  ⏭  Skipping '{name}' — TMDB type=movie")
+        if d.get("type","").lower() == "movie":
+            log.info(f"  ⏭  '{name}' — TMDB type=movie")
             return {}
-        # ── END GUARD ─────────────────────────────────────────────────────
+        # ── END FIX ───────────────────────────────────────────────────────
 
         sg = d.get("watch/providers",{}).get("results",{}).get("SG",{})
         platforms = []
@@ -277,7 +198,7 @@ def tmdb_search_show(name: str) -> dict:
             code = TMDB_PROVIDER_MAP.get(p.get("provider_id"))
             if code and code not in platforms: platforms.append(code)
 
-        alt_titles = d.get("alternative_titles",{}).get("results",[])
+        alt_titles    = d.get("alternative_titles",{}).get("results",[])
         chinese_title = None
         for t in alt_titles:
             if t.get("iso_3166_1") in ["CN","TW","HK","KR"]:
@@ -293,19 +214,17 @@ def tmdb_search_show(name: str) -> dict:
         elif "IN" in origin: genre_code = "indian"
         else:                genre_code = "western"
 
-        status   = d.get("status","")
         last_air = d.get("last_air_date","")
-        is_new   = status in ["Returning Series","In Production"]
+        is_new   = d.get("status","") in ["Returning Series","In Production"]
         if last_air:
             try:
                 days_ago = (datetime.now()-datetime.strptime(last_air,"%Y-%m-%d")).days
-                is_new = days_ago <= 14
+                is_new   = days_ago <= 14
             except: pass
 
         return {"tmdb_id":tmdb_id,"description":d.get("overview",""),
                 "chinese_title":chinese_title,"platforms":platforms,
                 "genre_code":genre_code,"is_new":is_new,"search_term":f"{name} drama"}
-
     except Exception as e:
         log.warning(f"TMDB show error '{name}': {e}"); return {}
 
@@ -318,13 +237,13 @@ def tmdb_search_person(name: str) -> dict:
         if not res.ok: return {}
         results = res.json().get("results",[])
         if not results: return {}
-        person = results[0]
+        person    = results[0]
         known_for = person.get("known_for",[])
         show_name = ""; genre_code = "others"
         if known_for:
-            show = known_for[0]
+            show      = known_for[0]
             show_name = show.get("name") or show.get("title","")
-            origin = show.get("origin_country",[])
+            origin    = show.get("origin_country",[])
             if isinstance(origin,list):
                 if   "KR" in origin: genre_code = "kdrama"
                 elif "CN" in origin: genre_code = "cdrama"
@@ -341,22 +260,24 @@ def tmdb_search_person(name: str) -> dict:
         log.warning(f"TMDB person error '{name}': {e}"); return {}
 
 
+# ── WIKIPEDIA ─────────────────────────────────────────────────────────────
+
 def wiki_lookup(name: str) -> dict:
     try:
         wiki_name = name.replace(" ","_")
-        for suffix in ["", "_TV_series"]:
+        for suffix in ["","_TV_series"]:
             url = f"{WIKI_API}/{requests.utils.quote(wiki_name+suffix)}"
             res = requests.get(url, timeout=10, headers=WIKI_HEADERS)
             if res.ok and res.json().get("type") != "disambiguation":
-                desc = res.json().get("extract","")
+                desc      = res.json().get("extract","")
                 sentences = desc.split(". ")
-                return {"description": ". ".join(sentences[:2]) + ("." if len(sentences)>1 else "")}
+                return {"description":". ".join(sentences[:2])+("." if len(sentences)>1 else "")}
         return {}
     except Exception as e:
         log.warning(f"Wikipedia error '{name}': {e}"); return {}
 
 
-# ── RSS HELPERS ───────────────────────────────────────────────────────────
+# ── RSS ───────────────────────────────────────────────────────────────────
 
 def fetch_rss_entries() -> list:
     entries = []
@@ -383,18 +304,55 @@ def enrich_event_from_rss(title: str, entries: list) -> dict:
     return {}
 
 
+def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -> list:
+    discovered = []
+    names  = [(a["name"], genre_map.get(a.get("genre_id",""),"others")) for a in artists[:40]]
+    names += [(s["name"], s.get("genre","others")) for s in shows[:30]]
+
+    for entry in entries:
+        title_text   = entry.get("title","")
+        summary_text = entry.get("summary","")
+        full_text    = (title_text+" "+summary_text).lower()
+        link         = entry.get("link","")
+
+        if "singapore" not in full_text: continue
+        ev_type = None
+        for kw, t in EVENT_TYPE_MAP.items():
+            if kw in full_text: ev_type = t; break
+        if not ev_type: continue
+
+        for name, genre_code in names:
+            if len(name) < 4 or name.lower() not in full_text: continue
+            event_title = title_text[:100].strip()
+            search_term = f"{name} Singapore"
+            if event_title.lower() in known_events or search_term.lower() in known_events:
+                continue
+            log.info(f"  RSS event found: '{event_title}' (artist: {name})")
+            discovered.append({"title":event_title,"search_term":search_term,
+                                "type":ev_type,"description":summary_text[:500],
+                                "link":link,"genre_code":genre_code})
+            known_events.add(event_title.lower())
+            break
+    return discovered
+
+
 # ── GOOGLE TRENDS ─────────────────────────────────────────────────────────
 
 def fetch_related_queries(pytrends, term: str) -> list:
     try:
         pytrends.build_payload([term], geo="SG", timeframe="now 7-d")
         related = pytrends.related_queries()
-        if term not in related: return []
+        if term not in related:
+            log.info(f"  No related queries returned for '{term}'")
+            return []
         top = related[term].get("top")
-        if top is None or top.empty: return []
+        if top is None or top.empty:
+            log.info(f"  Empty related queries for '{term}'")
+            return []
         return top["query"].tolist()[:10]
     except Exception as e:
-        log.warning(f"Related queries error '{term}': {e}"); return []
+        log.warning(f"  Related queries error '{term}': {e}")
+        return []
 
 
 def fetch_yesterday_score(pytrends, term: str) -> float:
@@ -426,23 +384,17 @@ def score_to_trend(score: float, prev: float = None) -> str:
 
 def build_sparkline(prev_sparkline: list, new_score: float) -> list:
     history = list(prev_sparkline or [])[-6:]
-    history.append(round(new_score, 1))
+    history.append(round(new_score,1))
     return history
 
 
 def get_prev_scores(sb, view: str, id_field: str) -> dict:
     try:
         res = sb.table(view).select(f"{id_field},score_today,sparkline").execute()
-        return {
-            r[id_field]: {
-                "score": r.get("score_today", 0),
-                "sparkline": r.get("sparkline", []),
-            }
-            for r in (res.data or [])
-        }
+        return {r[id_field]:{"score":r.get("score_today",0),"sparkline":r.get("sparkline",[])}
+                for r in (res.data or [])}
     except Exception as e:
-        log.warning(f"Could not fetch prev scores from {view}: {e}")
-        return {}
+        log.warning(f"Could not fetch prev scores from {view}: {e}"); return {}
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────
@@ -452,19 +404,17 @@ def main():
     log.info(f"  Run time: {now_sgt()}")
 
     sb       = create_client(SUPABASE_URL, SUPABASE_KEY)
-    pytrends = TrendReq(hl="en-SG", tz=480, timeout=(10, 25))
+    pytrends = TrendReq(hl="en-SG", tz=480, timeout=(10,25))
 
-    # Load genre map
     genre_rows = sb.table("genres").select("id,code").execute().data
-    genre_map  = {r["code"]: r["id"] for r in genre_rows}
+    genre_map  = {r["code"]:r["id"] for r in genre_rows}
 
-    # Load active items
     shows   = sb.table("shows_master").select("id,name,search_term").eq("is_active",True).execute().data or []
     artists = sb.table("artists_master").select("id,name,search_term").eq("is_active",True).execute().data or []
     events  = sb.table("events_master").select("id,title,search_term,event_date").eq("is_active",True).execute().data or []
     log.info(f"Active: {len(shows)} shows, {len(artists)} artists, {len(events)} events")
 
-    # FIX 2: also index search_term so renamed shows aren't re-discovered
+    # FIX 2: index both name AND search_term to prevent re-discovery
     known_shows   = {s["name"].lower() for s in shows}
     known_shows  |= {s["search_term"].lower() for s in shows if s.get("search_term")}
     known_artists = {a["name"].lower() for a in artists}
@@ -486,13 +436,13 @@ def main():
                 if category == "shows" and query_lower not in known_shows:
                     log.info(f"  New show candidate: '{query}'")
 
-                    # Pre-filter: skip if TMDB identifies this as a movie
+                    # Pre-filter: skip movies before hitting TMDB TV endpoint
                     if is_movie_title(query):
                         continue
 
                     tmdb = tmdb_search_show(query)
 
-                    # FIX 1: skip if TMDB returned nothing (movie, no seasons, etc.)
+                    # FIX 1: skip if TMDB returned nothing (movie/no seasons/no match)
                     if not tmdb:
                         log.info(f"  ⏭  '{query}' — no valid TV result, skipping")
                         continue
@@ -503,37 +453,26 @@ def main():
 
                     gc        = tmdb.get("genre_code", genre_code)
                     gid       = genre_map.get(gc) or genre_map.get("others")
-                    platforms = tmdb.get("platforms", [])
-
-                    if not platforms:
-                        GENRE_PLATFORM_FALLBACK = {
-                            "kdrama": ["viu"],
-                            "cdrama": ["wetv", "iqiyi"],
-                            "thai":   ["viu"],
-                            "local":  ["mewatch"],
-                            "western":["netflix"],
-                            "others": ["viu"],
-                        }
-                        platforms = GENRE_PLATFORM_FALLBACK.get(gc, ["viu"])
+                    platforms = tmdb.get("platforms",[]) or GENRE_PLATFORM_FALLBACK.get(gc,["viu"])
 
                     row = {
-                        "name":          query,
-                        "chinese_title": tmdb.get("chinese_title"),
-                        "genre_id":      gid,
-                        "platforms":     platforms,
-                        "description":   tmdb.get("description",""),
-                        "search_term":   tmdb.get("search_term", query),
-                        "tmdb_id":       tmdb.get("tmdb_id"),
+                        "name":            query,
+                        "chinese_title":   tmdb.get("chinese_title"),
+                        "genre_id":        gid,
+                        "platforms":       platforms,
+                        "description":     tmdb.get("description",""),
+                        "search_term":     tmdb.get("search_term", query),
+                        "tmdb_id":         tmdb.get("tmdb_id"),
                         "has_description": bool(tmdb.get("description","").strip()),
-                        "is_active":     True,
-                        "updated_at":    now_utc(),
+                        "is_active":       True,
+                        "updated_at":      now_utc(),
                     }
                     try:
                         sb.table("shows_master").insert(row).execute()
                         known_shows.add(query_lower)
                         log.info(f"  ✅ New show added: {query}")
                     except Exception as e:
-                        # FIX 3: log insert errors instead of silently swallowing them
+                        # FIX 3: log insert errors instead of silently swallowing
                         log.warning(f"  ❌ Show insert failed '{query}': {e}")
 
                 elif category == "artists" and query_lower not in known_artists:
@@ -542,15 +481,15 @@ def main():
                     gc   = tmdb.get("genre_code", genre_code)
                     gid  = genre_map.get(gc) or genre_map.get("others")
                     row  = {
-                        "name":          query,
-                        "role":          tmdb.get("role","Actor"),
-                        "show_name":     tmdb.get("show_name",""),
-                        "genre_id":      gid,
-                        "search_term":   query,
-                        "tmdb_id":       tmdb.get("tmdb_id"),
+                        "name":            query,
+                        "role":            tmdb.get("role","Actor"),
+                        "show_name":       tmdb.get("show_name",""),
+                        "genre_id":        gid,
+                        "search_term":     query,
+                        "tmdb_id":         tmdb.get("tmdb_id"),
                         "has_description": bool(tmdb.get("role") and tmdb.get("show_name")),
-                        "is_active":     True,
-                        "updated_at":    now_utc(),
+                        "is_active":       True,
+                        "updated_at":      now_utc(),
                     }
                     try:
                         sb.table("artists_master").insert(row).execute()
@@ -561,22 +500,21 @@ def main():
 
                 elif category == "events" and query_lower not in known_events:
                     log.info(f"  New event candidate: '{query}'")
-                    rss = enrich_event_from_rss(query, rss_entries)
-                    gc  = genre_code
-                    gid = genre_map.get(gc) or genre_map.get("others")
+                    rss  = enrich_event_from_rss(query, rss_entries)
+                    gid  = genre_map.get(genre_code) or genre_map.get("others")
                     links = [{"l":"More info","u":rss["link"]}] if rss.get("link") else []
-                    row = {
-                        "title":         query,
-                        "genre_id":      gid,
-                        "type":          rss.get("type","Event"),
-                        "venue":         "",
-                        "event_date":    "",
-                        "description":   rss.get("description",""),
-                        "links":         json.dumps(links),
-                        "search_term":   query,
+                    row  = {
+                        "title":           query,
+                        "genre_id":        gid,
+                        "type":            rss.get("type","Event"),
+                        "venue":           "",
+                        "event_date":      "",
+                        "description":     rss.get("description",""),
+                        "links":           json.dumps(links),
+                        "search_term":     query,
                         "has_description": bool(rss.get("description","").strip()),
-                        "is_active":     True,
-                        "updated_at":    now_utc(),
+                        "is_active":       True,
+                        "updated_at":      now_utc(),
                     }
                     try:
                         sb.table("events_master").insert(row).execute()
@@ -587,34 +525,32 @@ def main():
 
             time.sleep(TRENDS_DELAY)
 
-    # ── Dynamic event discovery ───────────────────────────────────────────
+    # ── Step 1b: Dynamic event discovery ─────────────────────────────────
     log.info("--- Step 1b: Discovering events from top shows/artists ---")
-    sorted_artists = sorted(artists, key=lambda a: a.get("name",""))
-    sorted_shows   = sorted(shows,   key=lambda s: s.get("name",""))
-    event_terms    = build_event_terms(sorted_shows, sorted_artists)
-
+    event_terms = build_event_terms(
+        sorted(shows,   key=lambda s: s.get("name","")),
+        sorted(artists, key=lambda a: a.get("name",""))
+    )
     for term in event_terms:
-        queries = fetch_related_queries(pytrends, term)
-        for query in queries:
+        for query in fetch_related_queries(pytrends, term):
             query_lower = query.lower()
-            if query_lower in known_events:
-                continue
+            if query_lower in known_events: continue
             log.info(f"  New event candidate: '{query}'")
-            rss  = enrich_event_from_rss(query, rss_entries)
-            gid  = genre_map.get("others")
+            rss   = enrich_event_from_rss(query, rss_entries)
+            gid   = genre_map.get("others")
             links = [{"l":"More info","u":rss["link"]}] if rss.get("link") else []
-            row = {
-                "title":         query,
-                "genre_id":      gid,
-                "type":          rss.get("type","Event"),
-                "venue":         "",
-                "event_date":    "",
-                "description":   rss.get("description",""),
-                "links":         json.dumps(links),
-                "search_term":   query,
+            row   = {
+                "title":           query,
+                "genre_id":        gid,
+                "type":            rss.get("type","Event"),
+                "venue":           "",
+                "event_date":      "",
+                "description":     rss.get("description",""),
+                "links":           json.dumps(links),
+                "search_term":     query,
                 "has_description": bool(rss.get("description","").strip()),
-                "is_active":     True,
-                "updated_at":    now_utc(),
+                "is_active":       True,
+                "updated_at":      now_utc(),
             }
             try:
                 sb.table("events_master").insert(row).execute()
@@ -624,28 +560,25 @@ def main():
                 log.warning(f"  ❌ Event insert failed '{query}': {e}")
         time.sleep(TRENDS_DELAY)
 
-    # ── RSS event discovery ───────────────────────────────────────────────
+    # ── Step 1c: RSS event discovery ─────────────────────────────────────
     log.info("--- Step 1c: Discovering events from RSS feeds ---")
     rss_shows   = sb.table("shows_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
     rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
-    rss_discovered = discover_events_from_rss(
-        rss_entries, rss_artists, rss_shows, known_events, genre_map
-    )
-    for ev in rss_discovered:
+    for ev in discover_events_from_rss(rss_entries, rss_artists, rss_shows, known_events, genre_map):
         gid   = genre_map.get(ev["genre_code"]) or genre_map.get("others")
         links = [{"l":"More info","u":ev["link"]}] if ev.get("link") else []
-        row = {
-            "title":         ev["title"],
-            "genre_id":      gid,
-            "type":          ev["type"],
-            "venue":         "Singapore",
-            "event_date":    "",
-            "description":   ev["description"],
-            "links":         json.dumps(links),
-            "search_term":   ev["search_term"],
+        row   = {
+            "title":           ev["title"],
+            "genre_id":        gid,
+            "type":            ev["type"],
+            "venue":           "Singapore",
+            "event_date":      "",
+            "description":     ev["description"],
+            "links":           json.dumps(links),
+            "search_term":     ev["search_term"],
             "has_description": bool(ev["description"].strip()),
-            "is_active":     True,
-            "updated_at":    now_utc(),
+            "is_active":       True,
+            "updated_at":      now_utc(),
         }
         try:
             sb.table("events_master").insert(row).execute()
@@ -687,8 +620,8 @@ def main():
     max_score = max(all_raw.values()) if all_raw else 1
     if max_score == 0: max_score = 1
 
-    def normalise_all(scores: dict) -> dict:
-        return {k: round((v / max_score) * 100, 1) for k, v in scores.items()}
+    def normalise_all(scores):
+        return {k: round((v/max_score)*100, 1) for k,v in scores.items()}
 
     show_norm   = normalise_all(show_raw)
     artist_norm = normalise_all(artist_raw)
@@ -701,27 +634,21 @@ def main():
     # ── STEP 3: Append history rows ───────────────────────────────────────
     log.info("--- Step 3: Appending history rows ---")
     sgt           = timezone(timedelta(hours=8))
-    yesterday_sgt = (datetime.now(sgt) - timedelta(days=1)).date()
-    recorded_at   = datetime(
-        yesterday_sgt.year, yesterday_sgt.month, yesterday_sgt.day,
-        4, 0, 0, tzinfo=timezone.utc
-    ).isoformat()
+    yesterday_sgt = (datetime.now(sgt)-timedelta(days=1)).date()
+    recorded_at   = datetime(yesterday_sgt.year, yesterday_sgt.month, yesterday_sgt.day,
+                             4, 0, 0, tzinfo=timezone.utc).isoformat()
 
     show_rows = []
     for s in shows:
-        name  = s["name"]
-        sid   = s["id"]
-        score = show_norm.get(name, 0)
-        prev  = show_prev.get(sid, {})
+        name  = s["name"]; sid = s["id"]
+        score = show_norm.get(name, 0); prev = show_prev.get(sid, {})
         show_rows.append({
-            "show_id":      sid,
-            "score":        score,
-            "trends_score": show_raw.get(name, 0),
+            "show_id":      sid, "score":score,
+            "trends_score": show_raw.get(name,0),
             "status":       score_to_status(score, prev.get("score")),
             "trend":        score_to_trend(score, prev.get("score")),
             "sparkline":    build_sparkline(prev.get("sparkline",[]), score),
-            "search_volume":0,
-            "recorded_at":  recorded_at,
+            "search_volume":0, "recorded_at":recorded_at,
         })
     if show_rows:
         sb.table("shows_history").insert(show_rows).execute()
@@ -729,19 +656,15 @@ def main():
 
     artist_rows = []
     for a in artists:
-        name  = a["name"]
-        aid   = a["id"]
-        score = artist_norm.get(name, 0)
-        prev  = artist_prev.get(aid, {})
+        name  = a["name"]; aid = a["id"]
+        score = artist_norm.get(name, 0); prev = artist_prev.get(aid, {})
         artist_rows.append({
-            "artist_id":    aid,
-            "score":        score,
-            "trends_score": artist_raw.get(name, 0),
+            "artist_id":    aid, "score":score,
+            "trends_score": artist_raw.get(name,0),
             "status":       score_to_status(score, prev.get("score")),
             "trend":        score_to_trend(score, prev.get("score")),
             "sparkline":    build_sparkline(prev.get("sparkline",[]), score),
-            "search_volume":0,
-            "recorded_at":  recorded_at,
+            "search_volume":0, "recorded_at":recorded_at,
         })
     if artist_rows:
         sb.table("artists_history").insert(artist_rows).execute()
@@ -749,19 +672,15 @@ def main():
 
     event_rows = []
     for e in events:
-        title = e["title"]
-        eid   = e["id"]
-        score = event_norm.get(title, 0)
-        prev  = event_prev.get(eid, {})
+        title = e["title"]; eid = e["id"]
+        score = event_norm.get(title, 0); prev = event_prev.get(eid, {})
         event_rows.append({
-            "event_id":     eid,
-            "score":        score,
-            "trends_score": event_raw.get(title, 0),
+            "event_id":     eid, "score":score,
+            "trends_score": event_raw.get(title,0),
             "status":       "Upcoming",
             "trend":        score_to_trend(score, prev.get("score")),
             "sparkline":    build_sparkline(prev.get("sparkline",[]), score),
-            "search_volume":0,
-            "recorded_at":  recorded_at,
+            "search_volume":0, "recorded_at":recorded_at,
         })
     if event_rows:
         sb.table("events_history").insert(event_rows).execute()
@@ -770,15 +689,13 @@ def main():
     # ── STEP 4: Genre ranking fixed ───────────────────────────────────────
     log.info("--- Step 4: Genre ranking fixed — skipping re-rank ---")
 
-    # ── STEP 5: has_description retry via Wikipedia ───────────────────────
+    # ── STEP 5: Fill missing descriptions ────────────────────────────────
     log.info("--- Step 5: Filling missing descriptions ---")
-    for table, name_field in [("shows_master","name"), ("events_master","title")]:
+    for table, name_field in [("shows_master","name"),("events_master","title")]:
         try:
-            pending = sb.table(table)\
-                .select(f"id,{name_field}")\
-                .eq("is_active", True)\
-                .eq("has_description", False)\
-                .execute().data or []
+            pending = sb.table(table).select(f"id,{name_field}")\
+                       .eq("is_active",True).eq("has_description",False)\
+                       .execute().data or []
             log.info(f"  {table}: {len(pending)} items missing description")
             for item in pending:
                 name = item[name_field]
@@ -786,10 +703,8 @@ def main():
                 desc = wiki.get("description","").strip()
                 if desc:
                     sb.table(table).update({
-                        "description":     desc,
-                        "has_description": True,
-                        "updated_at":      now_utc(),
-                    }).eq("id", item["id"]).execute()
+                        "description":desc,"has_description":True,"updated_at":now_utc()
+                    }).eq("id",item["id"]).execute()
                     log.info(f"  ✅ Description filled: {name}")
                 else:
                     log.info(f"  ⏳ Still pending: {name}")
@@ -799,27 +714,58 @@ def main():
 
     # ── STEP 6: Deactivate past events ───────────────────────────────────
     log.info("--- Step 6: Deactivating past events ---")
-    now_sgt_date  = datetime.now(timezone(timedelta(hours=8)))
-    current_month = now_sgt_date.month
-    current_year  = now_sgt_date.year
-    past_months   = [
-        datetime(current_year, m, 1).strftime("%b").lower()
-        for m in range(1, current_month)
-    ]
-
-    all_events = sb.table("events_master")\
-        .select("id,title,event_date")\
-        .eq("is_active", True)\
-        .execute().data or []
-
+    now_sgt_dt    = datetime.now(timezone(timedelta(hours=8)))
+    past_months   = [datetime(now_sgt_dt.year,m,1).strftime("%b").lower()
+                     for m in range(1, now_sgt_dt.month)]
+    all_events    = sb.table("events_master").select("id,title,event_date")\
+                     .eq("is_active",True).execute().data or []
     for e in all_events:
         date_str = (e.get("event_date") or "").lower()
         if any(m in date_str for m in past_months):
-            sb.table("events_master").update({
-                "is_active":  False,
-                "updated_at": now_utc(),
-            }).eq("id", e["id"]).execute()
+            sb.table("events_master").update({"is_active":False,"updated_at":now_utc()})\
+              .eq("id",e["id"]).execute()
             log.info(f"  Deactivated past event: {e['title'][:50]}")
+
+    # ── STEP 7: Auto-deactivate zero-interest items ───────────────────────
+    log.info("--- Step 7: Auto-deactivating zero-interest items ---")
+
+    try:
+        all_show_scores = sb.table("shows_scores")\
+            .select("id,score_today,score_7d,score_30d,sparkline").execute().data or []
+        deactivate_shows = [
+            s["id"] for s in all_show_scores
+            if (s.get("score_7d") or 0) == 0
+            and (s.get("score_30d") or 0) == 0
+            and len(s.get("sparkline") or []) >= 5
+            and all(v == 0 for v in (s.get("sparkline") or []))
+        ]
+        if deactivate_shows:
+            sb.table("shows_master").update({"is_active":False,"updated_at":now_utc()})\
+              .in_("id", deactivate_shows).execute()
+            log.info(f"  Deactivated {len(deactivate_shows)} zero-interest shows")
+        else:
+            log.info("  No shows to deactivate")
+    except Exception as e:
+        log.warning(f"  Show auto-deactivate error: {e}")
+
+    try:
+        all_artist_scores = sb.table("artists_scores")\
+            .select("id,score_today,score_7d,score_30d,sparkline").execute().data or []
+        deactivate_artists = [
+            a["id"] for a in all_artist_scores
+            if (a.get("score_7d") or 0) == 0
+            and (a.get("score_30d") or 0) == 0
+            and len(a.get("sparkline") or []) >= 5
+            and all(v == 0 for v in (a.get("sparkline") or []))
+        ]
+        if deactivate_artists:
+            sb.table("artists_master").update({"is_active":False,"updated_at":now_utc()})\
+              .in_("id", deactivate_artists).execute()
+            log.info(f"  Deactivated {len(deactivate_artists)} zero-interest artists")
+        else:
+            log.info("  No artists to deactivate")
+    except Exception as e:
+        log.warning(f"  Artist auto-deactivate error: {e}")
 
     log.info("=== Update complete ===")
     log.info(f"  Shows scored:   {len(show_rows)}")
