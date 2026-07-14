@@ -1,10 +1,9 @@
-name: Drama Watch SG — Discovery (Mon/Wed/Fri)
+name: Drama Watch SG - Discovery
 
 on:
   schedule:
-    cron: '0 15 * * *'  # every day, 11pm SGT
-      
-      workflow_dispatch:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
 
 jobs:
   discover:
@@ -33,4 +32,3 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: discover-logs
-          path: '*.log'
