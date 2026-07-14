@@ -1,0 +1,36 @@
+name: Drama Watch SG — Discovery (Mon/Wed/Fri)
+
+on:
+  schedule:
+    cron: '0 15 * * *'  # every day, 11pm SGT
+      
+      workflow_dispatch:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install supabase pytrends requests python-dotenv feedparser
+
+      - name: Run discovery scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: python scraper_discover.py
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: discover-logs
+          path: '*.log'
