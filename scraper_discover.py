@@ -3,12 +3,19 @@ Drama Watch SG — scraper_discover.py
 
 Runs daily at 11pm SGT (15:00 UTC) via GitHub Actions.
 
-Discovery strategy — uses TMDB APIs directly (no pytrends, no 429s):
-  1. TMDB Trending TV (week) — globally trending shows right now
-  2. TMDB Discover — new shows by country aired in last 60 days
-  3. TMDB Trending People (week) — trending drama actors/actresses
-  4. TMDB show cast — extract artists from newly added shows
-  5. RSS event discovery from SG entertainment news feeds
+Flow:
+1. TMDB Trending TV (week) — globally trending shows right now
+2. TMDB Discover by country — new shows aired in last 60 days
+   (KR, CN, TW, TH, SG, JP, TR, IN)
+3. TMDB Trending People (week) — trending drama actors/actresses
+4. Cast extraction from newly added shows
+5. RSS event discovery from SG entertainment news feeds
+
+No pytrends — no 429s.
+New seeds are inserted with is_active=True.
+scraper_update.py handles scoring and auto-deactivation.
+Seeds added within 30 days are protected from auto-deactivation
+even if they have no Trends data yet.
 """
 
 import os, time, json, logging, requests
@@ -37,12 +44,18 @@ TMDB_PROVIDER_MAP = {
 }
 
 GENRE_PLATFORM_FALLBACK = {
-    "kdrama":["viu"],    "cdrama":["wetv","iqiyi"],
-    "thai":["viu"],      "local":["mewatch"],
-    "western":["netflix"],"others":["viu"],
-    "japanese":["netflix"],"turkish":["netflix"],"indian":["amazon"],
+    "kdrama":   ["viu"],
+    "cdrama":   ["wetv", "iqiyi"],
+    "thai":     ["viu"],
+    "local":    ["mewatch"],
+    "western":  ["netflix"],
+    "japanese": ["netflix"],
+    "turkish":  ["netflix"],
+    "indian":   ["amazon"],
+    "others":   ["viu"],
 }
 
+# Countries to sweep — maps to fallback genre code
 DISCOVER_COUNTRIES = {
     "KR": "kdrama",
     "CN": "cdrama",
@@ -54,7 +67,7 @@ DISCOVER_COUNTRIES = {
     "IN": "indian",
 }
 
-# Only keep main cast (top N per show) to avoid flooding DB with minor roles
+# Top N cast members to extract per show
 MAX_CAST_PER_SHOW = 5
 
 EVENT_TYPE_MAP = {
@@ -73,13 +86,6 @@ RSS_FEEDS = [
     "https://www.asiaone.com/rss/entertainment",
     "https://www.straitstimes.com/news/life/rss.xml",
     "https://www.soompi.com/feed",
-]
-
-# SG event keywords for RSS scanning
-SG_EVENT_KEYWORDS = [
-    "singapore", "fan meet", "fan meeting", "concert", "showcase",
-    "pop-up", "premiere", "screening", "fan sign", "tour",
-    "meet and greet", "press conference", "media call",
 ]
 
 
@@ -106,11 +112,13 @@ def origin_to_genre(origin: list) -> str:
 # ── TMDB SHOW DISCOVERY ───────────────────────────────────────────────────
 
 def tmdb_trending_shows() -> list:
+    """Globally trending TV shows this week."""
     try:
         res = requests.get(f"{TMDB_BASE}/trending/tv/week",
-                           params={"api_key":TMDB_API_KEY,"language":"en-SG"}, timeout=10)
+                           params={"api_key": TMDB_API_KEY, "language": "en-SG"},
+                           timeout=10)
         if not res.ok: return []
-        results = res.json().get("results",[])
+        results = res.json().get("results", [])
         log.info(f"  TMDB Trending TV: {len(results)} shows")
         return results
     except Exception as e:
@@ -118,16 +126,21 @@ def tmdb_trending_shows() -> list:
 
 
 def tmdb_discover_by_country(country: str, days_back: int = 60) -> list:
+    """New shows from a specific country in the last N days, sorted by popularity."""
     try:
-        since = (date.today()-timedelta(days=days_back)).strftime("%Y-%m-%d")
+        since = (date.today() - timedelta(days=days_back)).strftime("%Y-%m-%d")
         res   = requests.get(f"{TMDB_BASE}/discover/tv",
-                             params={"api_key":TMDB_API_KEY,"language":"en-SG",
-                                     "with_origin_country":country,
-                                     "sort_by":"popularity.desc",
-                                     "first_air_date.gte":since,"page":1},
+                             params={
+                                 "api_key":             TMDB_API_KEY,
+                                 "language":            "en-SG",
+                                 "with_origin_country": country,
+                                 "sort_by":             "popularity.desc",
+                                 "first_air_date.gte":  since,
+                                 "page":                1,
+                             },
                              timeout=10)
         if not res.ok: return []
-        results = res.json().get("results",[])
+        results = res.json().get("results", [])
         log.info(f"  TMDB Discover {country}: {len(results)} shows since {since}")
         return results
     except Exception as e:
@@ -135,11 +148,17 @@ def tmdb_discover_by_country(country: str, days_back: int = 60) -> list:
 
 
 def tmdb_get_show_detail(tmdb_id: int) -> dict:
+    """Full TV show detail with providers, alternative titles, and credits."""
     try:
-        res = requests.get(f"{TMDB_BASE}/tv/{tmdb_id}",
-                           params={"api_key":TMDB_API_KEY,"language":"en-SG",
-                                   "append_to_response":"watch/providers,alternative_titles,credits"},
-                           timeout=10)
+        res = requests.get(
+            f"{TMDB_BASE}/tv/{tmdb_id}",
+            params={
+                "api_key":            TMDB_API_KEY,
+                "language":           "en-SG",
+                "append_to_response": "watch/providers,alternative_titles,credits",
+            },
+            timeout=10
+        )
         if not res.ok: return {}
         return res.json()
     except Exception as e:
@@ -148,65 +167,62 @@ def tmdb_get_show_detail(tmdb_id: int) -> dict:
 
 def build_show_row(name: str, detail: dict, genre_map: dict,
                    fallback_genre: str = "others") -> dict | None:
+    """Build a shows_master insert row from TMDB detail. Returns None if invalid."""
     num_seasons  = detail.get("number_of_seasons") or 0
     num_episodes = detail.get("number_of_episodes") or 0
     if num_seasons == 0 or num_episodes == 0:
         log.info(f"  ⏭  '{name}' — no TV structure (s={num_seasons}, ep={num_episodes})")
         return None
-    if detail.get("type","").lower() == "movie":
-        log.info(f"  ⏭  '{name}' — TMDB type=movie"); return None
+    if detail.get("type", "").lower() == "movie":
+        log.info(f"  ⏭  '{name}' — TMDB type=movie")
+        return None
 
-    sg = detail.get("watch/providers",{}).get("results",{}).get("SG",{})
+    # SG streaming platforms
+    sg        = detail.get("watch/providers", {}).get("results", {}).get("SG", {})
     platforms = []
-    for p in sg.get("flatrate",[]):
+    for p in sg.get("flatrate", []):
         code = TMDB_PROVIDER_MAP.get(p.get("provider_id"))
         if code and code not in platforms: platforms.append(code)
 
-    alt_titles    = detail.get("alternative_titles",{}).get("results",[])
+    # Chinese/Korean alternative title
+    alt_titles    = detail.get("alternative_titles", {}).get("results", [])
     chinese_title = None
     for t in alt_titles:
-        if t.get("iso_3166_1") in ["CN","TW","HK","KR"]:
+        if t.get("iso_3166_1") in ["CN", "TW", "HK", "KR"]:
             chinese_title = t.get("title"); break
 
-    origin     = detail.get("origin_country",[])
+    origin     = detail.get("origin_country", [])
     genre_code = origin_to_genre(origin) if origin else fallback_genre
     gid        = genre_map.get(genre_code) or genre_map.get("others")
-    platforms  = platforms or GENRE_PLATFORM_FALLBACK.get(genre_code,["viu"])
+    platforms  = platforms or GENRE_PLATFORM_FALLBACK.get(genre_code, ["viu"])
 
     return {
         "name":            name,
         "chinese_title":   chinese_title,
         "genre_id":        gid,
         "platforms":       platforms,
-        "description":     detail.get("overview",""),
+        "description":     detail.get("overview", ""),
         "search_term":     f"{name} drama",
         "tmdb_id":         detail.get("id"),
-        "has_description": bool(detail.get("overview","").strip()),
+        "has_description": bool(detail.get("overview", "").strip()),
         "is_active":       True,
         "updated_at":      now_utc(),
     }
 
 
-def extract_cast_from_detail(detail: dict, show_name: str,
-                              genre_code: str) -> list:
-    """
-    Extract top cast members from a show's TMDB credits.
-    Returns list of dicts ready for artists_master.
-    """
-    credits = detail.get("credits",{})
-    cast    = credits.get("cast",[])[:MAX_CAST_PER_SHOW]
+def extract_cast(detail: dict, show_name: str, genre_code: str) -> list:
+    """Extract top cast from TMDB credits — returns list of artist dicts."""
+    cast    = detail.get("credits", {}).get("cast", [])[:MAX_CAST_PER_SHOW]
     artists = []
     for person in cast:
-        name = person.get("name","").strip()
+        name = person.get("name", "").strip()
         if not name: continue
-        role = "Actress" if person.get("gender") == 1 else "Actor"
         artists.append({
-            "name":            name,
-            "role":            role,
-            "show_name":       show_name,
-            "tmdb_id":         person.get("id"),
-            "genre_code":      genre_code,
-            "has_description": True,
+            "name":     name,
+            "role":     "Actress" if person.get("gender") == 1 else "Actor",
+            "show_name": show_name,
+            "tmdb_id":  person.get("id"),
+            "genre_code": genre_code,
         })
     return artists
 
@@ -214,35 +230,26 @@ def extract_cast_from_detail(detail: dict, show_name: str,
 # ── TMDB ARTIST DISCOVERY ─────────────────────────────────────────────────
 
 def tmdb_trending_people() -> list:
-    """Fetch trending people this week from TMDB."""
+    """Trending people this week from TMDB."""
     try:
         res = requests.get(f"{TMDB_BASE}/trending/person/week",
-                           params={"api_key":TMDB_API_KEY,"language":"en-SG"}, timeout=10)
+                           params={"api_key": TMDB_API_KEY, "language": "en-SG"},
+                           timeout=10)
         if not res.ok: return []
-        results = res.json().get("results",[])
+        results = res.json().get("results", [])
         log.info(f"  TMDB Trending People: {len(results)} people")
         return results
     except Exception as e:
         log.warning(f"TMDB trending people error: {e}"); return []
 
 
-def is_asian_drama_person(person: dict) -> tuple[bool, str]:
-    """
-    Check if a trending person is known for Asian dramas.
-    Returns (is_valid, genre_code).
-    """
-    known_for = person.get("known_for",[])
-    if not known_for: return False, ""
-
-    # Check their known_for work
-    for work in known_for:
-        media_type = work.get("media_type","")
-        if media_type != "tv": continue
-        origin = work.get("origin_country",[])
-        genre  = origin_to_genre(origin)
+def is_asian_drama_person(person: dict) -> tuple:
+    """Check if a trending person is known for Asian dramas. Returns (bool, genre_code)."""
+    for work in person.get("known_for", []):
+        if work.get("media_type") != "tv": continue
+        genre = origin_to_genre(work.get("origin_country", []))
         if genre != "others":
             return True, genre
-
     return False, ""
 
 
@@ -250,14 +257,14 @@ def is_asian_drama_person(person: dict) -> tuple[bool, str]:
 
 def wiki_lookup(name: str) -> str:
     try:
-        wiki_name = name.replace(" ","_")
-        for suffix in ["","_TV_series"]:
+        wiki_name = name.replace(" ", "_")
+        for suffix in ["", "_TV_series"]:
             url = f"{WIKI_API}/{requests.utils.quote(wiki_name+suffix)}"
             res = requests.get(url, timeout=10, headers=WIKI_HEADERS)
             if res.ok and res.json().get("type") != "disambiguation":
-                desc      = res.json().get("extract","")
+                desc      = res.json().get("extract", "")
                 sentences = desc.split(". ")
-                return ". ".join(sentences[:2])+("." if len(sentences)>1 else "")
+                return ". ".join(sentences[:2]) + ("." if len(sentences) > 1 else "")
         return ""
     except Exception as e:
         log.warning(f"Wikipedia error '{name}': {e}"); return ""
@@ -277,17 +284,19 @@ def fetch_rss_entries() -> list:
 
 
 def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -> list:
+    """Scan SG entertainment RSS for events mentioning known artists/shows."""
     discovered = []
-    names  = [(a["name"], genre_map.get(a.get("genre_id",""),"others")) for a in artists[:40]]
-    names += [(s["name"], s.get("genre","others")) for s in shows[:30]]
+    names  = [(a["name"], genre_map.get(a.get("genre_id", ""), "others")) for a in artists[:40]]
+    names += [(s["name"], s.get("genre", "others")) for s in shows[:30]]
 
     for entry in entries:
-        title_text   = entry.get("title","")
-        summary_text = entry.get("summary","")
-        full_text    = (title_text+" "+summary_text).lower()
-        link         = entry.get("link","")
+        title_text   = entry.get("title", "")
+        summary_text = entry.get("summary", "")
+        full_text    = (title_text + " " + summary_text).lower()
+        link         = entry.get("link", "")
 
         if "singapore" not in full_text: continue
+
         ev_type = None
         for kw, t in EVENT_TYPE_MAP.items():
             if kw in full_text: ev_type = t; break
@@ -301,9 +310,12 @@ def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -
                 continue
             log.info(f"  RSS event found: '{event_title}' (artist: {name})")
             discovered.append({
-                "title":event_title,"search_term":search_term,
-                "type":ev_type,"description":summary_text[:500],
-                "link":link,"genre_code":genre_code,
+                "title":       event_title,
+                "search_term": search_term,
+                "type":        ev_type,
+                "description": summary_text[:500],
+                "link":        link,
+                "genre_code":  genre_code,
             })
             known_events.add(event_title.lower())
             break
@@ -319,39 +331,39 @@ def main():
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 
     genre_rows = sb.table("genres").select("id,code").execute().data
-    genre_map  = {r["code"]:r["id"] for r in genre_rows}
+    genre_map  = {r["code"]: r["id"] for r in genre_rows}
 
-    shows   = sb.table("shows_master").select("id,name,search_term,tmdb_id").eq("is_active",True).execute().data or []
-    artists = sb.table("artists_master").select("id,name,tmdb_id,genre_id").eq("is_active",True).execute().data or []
-    events  = sb.table("events_master").select("id,title,search_term").eq("is_active",True).execute().data or []
+    shows   = sb.table("shows_master").select("id,name,search_term,tmdb_id").eq("is_active", True).execute().data or []
+    artists = sb.table("artists_master").select("id,name,tmdb_id,genre_id").eq("is_active", True).execute().data or []
+    events  = sb.table("events_master").select("id,title,search_term").eq("is_active", True).execute().data or []
     log.info(f"Active: {len(shows)} shows, {len(artists)} artists, {len(events)} events")
 
-    known_show_names  = {s["name"].lower() for s in shows}
-    known_show_names |= {s["search_term"].lower() for s in shows if s.get("search_term")}
-    known_show_tmdb   = {s["tmdb_id"] for s in shows if s.get("tmdb_id")}
-    known_artist_names= {a["name"].lower() for a in artists}
-    known_artist_tmdb = {a["tmdb_id"] for a in artists if a.get("tmdb_id")}
-    known_events      = {e["title"].lower() for e in events}
+    # Known sets — by name and tmdb_id to prevent duplicates
+    known_show_names   = {s["name"].lower() for s in shows}
+    known_show_names  |= {(s.get("search_term") or "").lower() for s in shows}
+    known_show_tmdb    = {s["tmdb_id"] for s in shows if s.get("tmdb_id")}
+    known_artist_names = {a["name"].lower() for a in artists}
+    known_artist_tmdb  = {a["tmdb_id"] for a in artists if a.get("tmdb_id")}
+    known_events       = {e["title"].lower() for e in events}
 
     rss_entries = fetch_rss_entries()
     new_shows   = 0
     new_artists = 0
+    newly_added = []  # (name, detail, genre_code) for cast extraction
 
     # ── STEP 1: TMDB Trending TV this week ───────────────────────────────
     log.info("--- Step 1: TMDB Trending TV (week) ---")
-    newly_added_shows = []  # track for cast extraction
-
     for show in tmdb_trending_shows():
         tmdb_id    = show.get("id")
-        name       = show.get("name","").strip()
-        origin     = show.get("origin_country",[])
+        name       = show.get("name", "").strip()
+        origin     = show.get("origin_country", [])
         name_lower = name.lower()
 
         if not name or not tmdb_id: continue
         if tmdb_id in known_show_tmdb: continue
         if name_lower in known_show_names: continue
         if not any(c in origin for c in DISCOVER_COUNTRIES):
-            log.info(f"  ⏭  '{name}' — origin {origin} not tracked"); continue
+            continue
 
         log.info(f"  Trending candidate: '{name}' ({origin})")
         detail = tmdb_get_show_detail(tmdb_id)
@@ -368,19 +380,18 @@ def main():
             known_show_names.add(name_lower)
             known_show_tmdb.add(tmdb_id)
             new_shows += 1
-            newly_added_shows.append((name, detail, row.get("genre_id"), origin_to_genre(origin)))
+            newly_added.append((name, detail, origin_to_genre(origin)))
             log.info(f"  ✅ New show added: {name}")
         except Exception as e:
             log.warning(f"  ❌ Show insert failed '{name}': {e}")
         time.sleep(0.3)
 
-    # ── STEP 2: TMDB Discover by country — new shows last 60 days ────────
+    # ── STEP 2: TMDB Discover by country ─────────────────────────────────
     log.info("--- Step 2: TMDB Discover by country ---")
-
     for country, fallback_genre in DISCOVER_COUNTRIES.items():
         for show in tmdb_discover_by_country(country, days_back=60):
             tmdb_id    = show.get("id")
-            name       = show.get("name","").strip()
+            name       = show.get("name", "").strip()
             name_lower = name.lower()
 
             if not name or not tmdb_id: continue
@@ -402,7 +413,7 @@ def main():
                 known_show_names.add(name_lower)
                 known_show_tmdb.add(tmdb_id)
                 new_shows += 1
-                newly_added_shows.append((name, detail, row.get("genre_id"), fallback_genre))
+                newly_added.append((name, detail, fallback_genre))
                 log.info(f"  ✅ New show added: {name}")
             except Exception as e:
                 log.warning(f"  ❌ Show insert failed '{name}': {e}")
@@ -412,10 +423,8 @@ def main():
 
     # ── STEP 3: Extract cast from newly added shows ───────────────────────
     log.info("--- Step 3: Extracting cast from new shows ---")
-
-    for show_name, detail, gid, genre_code in newly_added_shows:
-        cast_members = extract_cast_from_detail(detail, show_name, genre_code)
-        for person in cast_members:
+    for show_name, detail, genre_code in newly_added:
+        for person in extract_cast(detail, show_name, genre_code):
             name       = person["name"]
             tmdb_id    = person.get("tmdb_id")
             name_lower = name.lower()
@@ -445,11 +454,10 @@ def main():
                 log.warning(f"  ❌ Artist insert failed '{name}': {e}")
             time.sleep(0.2)
 
-    # ── STEP 4: TMDB Trending People this week ────────────────────────────
+    # ── STEP 4: TMDB Trending People ─────────────────────────────────────
     log.info("--- Step 4: TMDB Trending People (week) ---")
-
     for person in tmdb_trending_people():
-        name       = person.get("name","").strip()
+        name       = person.get("name", "").strip()
         tmdb_id    = person.get("id")
         name_lower = name.lower()
 
@@ -461,16 +469,14 @@ def main():
         if not is_valid:
             log.info(f"  ⏭  '{name}' — not Asian drama person"); continue
 
-        known_for  = person.get("known_for",[])
-        show_name  = ""
-        for work in known_for:
+        show_name = ""
+        for work in person.get("known_for", []):
             if work.get("media_type") == "tv":
-                show_name = work.get("name",""); break
+                show_name = work.get("name", ""); break
 
-        role = "Actress" if person.get("gender") == 1 else "Actor"
-        row  = {
+        row = {
             "name":            name,
-            "role":            role,
+            "role":            "Actress" if person.get("gender") == 1 else "Actor",
             "show_name":       show_name,
             "genre_id":        genre_map.get(genre_code) or genre_map.get("others"),
             "search_term":     name,
@@ -484,7 +490,7 @@ def main():
             known_artist_names.add(name_lower)
             known_artist_tmdb.add(tmdb_id)
             new_artists += 1
-            log.info(f"  ✅ New artist added: {name} ({role}, {genre_code})")
+            log.info(f"  ✅ New artist added: {name} ({genre_code})")
         except Exception as e:
             log.warning(f"  ❌ Artist insert failed '{name}': {e}")
         time.sleep(0.2)
@@ -493,12 +499,12 @@ def main():
 
     # ── STEP 5: RSS event discovery ───────────────────────────────────────
     log.info("--- Step 5: Discovering events from RSS feeds ---")
-    rss_shows   = sb.table("shows_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
-    rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
+    rss_shows   = sb.table("shows_master").select("id,name,genre_id").eq("is_active", True).execute().data or []
+    rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active", True).execute().data or []
 
     for ev in discover_events_from_rss(rss_entries, rss_artists, rss_shows, known_events, genre_map):
         gid   = genre_map.get(ev["genre_code"]) or genre_map.get("others")
-        links = [{"l":"More info","u":ev["link"]}] if ev.get("link") else []
+        links = [{"l": "More info", "u": ev["link"]}] if ev.get("link") else []
         row   = {
             "title":           ev["title"],
             "genre_id":        gid,
