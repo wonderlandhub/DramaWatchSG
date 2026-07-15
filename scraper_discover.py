@@ -11,11 +11,13 @@ Flow:
 4. Cast extraction from newly added shows
 5. RSS event discovery from SG entertainment news feeds
 
-No pytrends — no 429s.
-New seeds are inserted with is_active=True.
-scraper_update.py handles scoring and auto-deactivation.
-Seeds added within 30 days are protected from auto-deactivation
-even if they have no Trends data yet.
+Filters applied to every show candidate:
+  - Must be a TV series (not movie, not special)
+  - Must have at least 1 season and 1 episode
+  - Must NOT be Animation (TMDB genre 16)
+  - Must NOT be Talk Show, Reality, News, Documentary type
+  - TMDB popularity >= 5 (filters out obscure/irrelevant titles)
+  - Only tracks: KR, CN, TW, TH, SG, JP, TR, IN origin countries
 """
 
 import os, time, json, logging, requests
@@ -55,7 +57,6 @@ GENRE_PLATFORM_FALLBACK = {
     "others":   ["viu"],
 }
 
-# Countries to sweep — maps to fallback genre code
 DISCOVER_COUNTRIES = {
     "KR": "kdrama",
     "CN": "cdrama",
@@ -67,7 +68,26 @@ DISCOVER_COUNTRIES = {
     "IN": "indian",
 }
 
-# Top N cast members to extract per show
+# ── CONTENT FILTERS ───────────────────────────────────────────────────────
+
+# TMDB genre IDs to exclude — Animation (16)
+EXCLUDED_GENRE_IDS = {16}
+
+# TMDB show types to exclude — not live-action dramas
+EXCLUDED_TYPES = {
+    "talk show", "reality", "news", "documentary",
+    "miniseries",  # keep only Scripted and Scripted/Drama
+}
+# Note: we keep "Scripted", "Miniseries" that are drama-like
+# Actually miniseries can be dramas — let's only exclude clear non-dramas
+EXCLUDED_TYPES = {"talk show", "reality", "news", "documentary"}
+
+# Minimum TMDB popularity score — filters out very obscure titles
+MIN_POPULARITY = 5.0
+
+# Minimum episodes — skip very short specials
+MIN_EPISODES = 2
+
 MAX_CAST_PER_SHOW = 5
 
 EVENT_TYPE_MAP = {
@@ -109,10 +129,45 @@ def origin_to_genre(origin: list) -> str:
     return "others"
 
 
+# ── SHOW VALIDATION ───────────────────────────────────────────────────────
+
+def is_valid_drama(detail: dict, name: str) -> tuple:
+    """
+    Check if a TMDB show detail passes all drama filters.
+    Returns (is_valid: bool, reason: str).
+    """
+    # Must be a TV series
+    if detail.get("type", "").lower() == "movie":
+        return False, "TMDB type=movie"
+
+    # Must have episodes
+    num_seasons  = detail.get("number_of_seasons") or 0
+    num_episodes = detail.get("number_of_episodes") or 0
+    if num_seasons == 0 or num_episodes < MIN_EPISODES:
+        return False, f"too short (s={num_seasons}, ep={num_episodes})"
+
+    # Must not be animation
+    genre_ids = {g.get("id") for g in detail.get("genres", [])}
+    if genre_ids & EXCLUDED_GENRE_IDS:
+        genre_names = [g.get("name") for g in detail.get("genres", []) if g.get("id") in EXCLUDED_GENRE_IDS]
+        return False, f"excluded genre: {genre_names}"
+
+    # Must not be talk show / reality / news / documentary
+    show_type = detail.get("type", "").lower()
+    if show_type in EXCLUDED_TYPES:
+        return False, f"excluded type: {show_type}"
+
+    # Must meet minimum popularity
+    popularity = detail.get("popularity", 0) or 0
+    if popularity < MIN_POPULARITY:
+        return False, f"low popularity ({popularity:.1f} < {MIN_POPULARITY})"
+
+    return True, "ok"
+
+
 # ── TMDB SHOW DISCOVERY ───────────────────────────────────────────────────
 
 def tmdb_trending_shows() -> list:
-    """Globally trending TV shows this week."""
     try:
         res = requests.get(f"{TMDB_BASE}/trending/tv/week",
                            params={"api_key": TMDB_API_KEY, "language": "en-SG"},
@@ -126,19 +181,21 @@ def tmdb_trending_shows() -> list:
 
 
 def tmdb_discover_by_country(country: str, days_back: int = 60) -> list:
-    """New shows from a specific country in the last N days, sorted by popularity."""
     try:
         since = (date.today() - timedelta(days=days_back)).strftime("%Y-%m-%d")
-        res   = requests.get(f"{TMDB_BASE}/discover/tv",
-                             params={
-                                 "api_key":             TMDB_API_KEY,
-                                 "language":            "en-SG",
-                                 "with_origin_country": country,
-                                 "sort_by":             "popularity.desc",
-                                 "first_air_date.gte":  since,
-                                 "page":                1,
-                             },
-                             timeout=10)
+        res   = requests.get(
+            f"{TMDB_BASE}/discover/tv",
+            params={
+                "api_key":              TMDB_API_KEY,
+                "language":             "en-SG",
+                "with_origin_country":  country,
+                "sort_by":              "popularity.desc",
+                "first_air_date.gte":   since,
+                "without_genres":       "16",  # exclude Animation
+                "page":                 1,
+            },
+            timeout=10
+        )
         if not res.ok: return []
         results = res.json().get("results", [])
         log.info(f"  TMDB Discover {country}: {len(results)} shows since {since}")
@@ -148,7 +205,6 @@ def tmdb_discover_by_country(country: str, days_back: int = 60) -> list:
 
 
 def tmdb_get_show_detail(tmdb_id: int) -> dict:
-    """Full TV show detail with providers, alternative titles, and credits."""
     try:
         res = requests.get(
             f"{TMDB_BASE}/tv/{tmdb_id}",
@@ -167,24 +223,18 @@ def tmdb_get_show_detail(tmdb_id: int) -> dict:
 
 def build_show_row(name: str, detail: dict, genre_map: dict,
                    fallback_genre: str = "others") -> dict | None:
-    """Build a shows_master insert row from TMDB detail. Returns None if invalid."""
-    num_seasons  = detail.get("number_of_seasons") or 0
-    num_episodes = detail.get("number_of_episodes") or 0
-    if num_seasons == 0 or num_episodes == 0:
-        log.info(f"  ⏭  '{name}' — no TV structure (s={num_seasons}, ep={num_episodes})")
-        return None
-    if detail.get("type", "").lower() == "movie":
-        log.info(f"  ⏭  '{name}' — TMDB type=movie")
+    """Build shows_master insert row. Returns None if show fails validation."""
+    is_valid, reason = is_valid_drama(detail, name)
+    if not is_valid:
+        log.info(f"  ⏭  '{name}' — {reason}")
         return None
 
-    # SG streaming platforms
     sg        = detail.get("watch/providers", {}).get("results", {}).get("SG", {})
     platforms = []
     for p in sg.get("flatrate", []):
         code = TMDB_PROVIDER_MAP.get(p.get("provider_id"))
         if code and code not in platforms: platforms.append(code)
 
-    # Chinese/Korean alternative title
     alt_titles    = detail.get("alternative_titles", {}).get("results", [])
     chinese_title = None
     for t in alt_titles:
@@ -211,26 +261,22 @@ def build_show_row(name: str, detail: dict, genre_map: dict,
 
 
 def extract_cast(detail: dict, show_name: str, genre_code: str) -> list:
-    """Extract top cast from TMDB credits — returns list of artist dicts."""
-    cast    = detail.get("credits", {}).get("cast", [])[:MAX_CAST_PER_SHOW]
-    artists = []
-    for person in cast:
-        name = person.get("name", "").strip()
-        if not name: continue
-        artists.append({
-            "name":     name,
-            "role":     "Actress" if person.get("gender") == 1 else "Actor",
-            "show_name": show_name,
-            "tmdb_id":  person.get("id"),
+    cast = detail.get("credits", {}).get("cast", [])[:MAX_CAST_PER_SHOW]
+    return [
+        {
+            "name":       p.get("name", "").strip(),
+            "role":       "Actress" if p.get("gender") == 1 else "Actor",
+            "show_name":  show_name,
+            "tmdb_id":    p.get("id"),
             "genre_code": genre_code,
-        })
-    return artists
+        }
+        for p in cast if p.get("name", "").strip()
+    ]
 
 
 # ── TMDB ARTIST DISCOVERY ─────────────────────────────────────────────────
 
 def tmdb_trending_people() -> list:
-    """Trending people this week from TMDB."""
     try:
         res = requests.get(f"{TMDB_BASE}/trending/person/week",
                            params={"api_key": TMDB_API_KEY, "language": "en-SG"},
@@ -244,7 +290,6 @@ def tmdb_trending_people() -> list:
 
 
 def is_asian_drama_person(person: dict) -> tuple:
-    """Check if a trending person is known for Asian dramas. Returns (bool, genre_code)."""
     for work in person.get("known_for", []):
         if work.get("media_type") != "tv": continue
         genre = origin_to_genre(work.get("origin_country", []))
@@ -284,7 +329,6 @@ def fetch_rss_entries() -> list:
 
 
 def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -> list:
-    """Scan SG entertainment RSS for events mentioning known artists/shows."""
     discovered = []
     names  = [(a["name"], genre_map.get(a.get("genre_id", ""), "others")) for a in artists[:40]]
     names += [(s["name"], s.get("genre", "others")) for s in shows[:30]]
@@ -296,7 +340,6 @@ def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -
         link         = entry.get("link", "")
 
         if "singapore" not in full_text: continue
-
         ev_type = None
         for kw, t in EVENT_TYPE_MAP.items():
             if kw in full_text: ev_type = t; break
@@ -338,7 +381,6 @@ def main():
     events  = sb.table("events_master").select("id,title,search_term").eq("is_active", True).execute().data or []
     log.info(f"Active: {len(shows)} shows, {len(artists)} artists, {len(events)} events")
 
-    # Known sets — by name and tmdb_id to prevent duplicates
     known_show_names   = {s["name"].lower() for s in shows}
     known_show_names  |= {(s.get("search_term") or "").lower() for s in shows}
     known_show_tmdb    = {s["tmdb_id"] for s in shows if s.get("tmdb_id")}
@@ -363,6 +405,7 @@ def main():
         if tmdb_id in known_show_tmdb: continue
         if name_lower in known_show_names: continue
         if not any(c in origin for c in DISCOVER_COUNTRIES):
+            log.info(f"  ⏭  '{name}' — origin {origin} not tracked")
             continue
 
         log.info(f"  Trending candidate: '{name}' ({origin})")
@@ -467,7 +510,8 @@ def main():
 
         is_valid, genre_code = is_asian_drama_person(person)
         if not is_valid:
-            log.info(f"  ⏭  '{name}' — not Asian drama person"); continue
+            log.info(f"  ⏭  '{name}' — not Asian drama person")
+            continue
 
         show_name = ""
         for work in person.get("known_for", []):
