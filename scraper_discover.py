@@ -2,10 +2,7 @@
 Drama Watch SG — scraper_discover.py
 
 Runs daily at 11pm SGT (15:00 UTC) via GitHub Actions.
-Uses Google Trends RSS feed instead of pytrends for discovery —
-no API key, no rate limiting, no 429s.
-
-RSS feed: https://trends.google.com/trending/rss?geo=SG
+Uses Google Trends RSS feed instead of pytrends — no 429s.
 """
 
 import os, time, json, logging, requests, re
@@ -26,7 +23,6 @@ TMDB_BASE    = "https://api.themoviedb.org/3"
 WIKI_API     = "https://en.wikipedia.org/api/rest_v1/page/summary"
 WIKI_HEADERS = {"User-Agent": "DramaWatchSG/1.0"}
 
-# Google Trends RSS — Singapore daily trending searches (no auth, no rate limit)
 TRENDS_RSS_SG = "https://trends.google.com/trending/rss?geo=SG"
 
 TMDB_PROVIDER_MAP = {
@@ -41,23 +37,6 @@ GENRE_PLATFORM_FALLBACK = {
     "thai":["viu"],"local":["mewatch"],
     "western":["netflix"],"others":["viu"],
 }
-
-# Keywords to identify drama-related trending terms
-DRAMA_KEYWORDS = [
-    "drama", "kdrama", "k-drama", "series", "episode", "netflix",
-    "viu", "iqiyi", "wetv", "mewatch", "disney+",
-    "korean", "chinese", "thai", "singapore", "japanese",
-    "actor", "actress", "cast", "season",
-]
-
-# Keywords to immediately discard non-drama trending terms
-DISCARD_KEYWORDS = [
-    "stock", "price", "weather", "score", "match", "game",
-    "iphone", "samsung", "covid", "election", "minister",
-    "budget", "hdb", "mrt", "airline", "flight", "hotel",
-    "recipe", "food", "restaurant", "hawker", "sgd", "forex",
-    "crypto", "bitcoin", "nft", "giveaway", "sale", "promo",
-]
 
 EVENT_TYPE_MAP = {
     "fan meet": "Fan Meet", "fan meeting": "Fan Meet", "fansign": "Fan Meet",
@@ -77,72 +56,86 @@ RSS_FEEDS = [
     "https://www.soompi.com/feed",
 ]
 
+# ── FILTER LISTS ──────────────────────────────────────────────────────────
 
-# ── HELPERS ───────────────────────────────────────────────────────────────
+# Immediately discard if ANY of these words appear in the term
+DISCARD_WORDS = {
+    # Sports
+    "vs", "fc", "match", "score", "league", "cup", "cricket", "football",
+    "tennis", "golf", "swimming", "athletics", "olympic", "paralympic",
+    "badminton", "basketball", "volleyball", "handball", "cycling",
+    # Politics / Government
+    "minister", "parliament", "election", "government", "policy", "budget",
+    "govtech", "cpf", "hdb", "mrt", "lta", "moh", "moe", "mindef",
+    "singlish", "singapore", "sg", "pm ", "mp ",
+    # Finance
+    "stock", "sgd", "usd", "forex", "crypto", "bitcoin", "nft", "ipo",
+    "bank", "interest", "rate", "inflation", "recession", "fund",
+    # Tech / Products
+    "iphone", "samsung", "apple", "google", "microsoft", "android",
+    "laptop", "tablet", "gaming", "gpu", "cpu", "ai ",
+    # Food / Lifestyle
+    "recipe", "food", "restaurant", "hawker", "cafe", "coffee", "bubble tea",
+    "hotel", "flight", "airline", "travel", "visa", "passport",
+    # Legal / News
+    "litigants", "lawsuit", "court", "accused", "arrested", "charged",
+    "vexatious", "tribunal", "verdict", "sentence",
+    # Generic trending noise
+    "death", "dead", "died", "murder", "accident", "crash",
+    "weather", "haze", "rain", "flood", "earthquake",
+    "sale", "promo", "discount", "giveaway", "lucky draw",
+    "covid", "dengue", "mpox", "virus", "vaccine",
+    "zodiac", "horoscope", "astrology",
+}
 
-def now_utc() -> str:
-    return datetime.now(timezone.utc).isoformat()
+# Single-word Chinese/Korean/Japanese terms that are NOT drama titles
+DISCARD_SINGLE_CJK = {
+    "巴士", "公车", "地铁", "飞机", "酒店", "天气", "新加坡",
+    "韩国", "中国", "日本", "泰国", "美国", "英国",
+}
 
-def now_sgt() -> str:
-    sgt = timezone(timedelta(hours=8))
-    return datetime.now(sgt).strftime("%Y-%m-%d %H:%M SGT")
+# Only proceed to TMDB if term passes ALL these checks
+def is_candidate(term: str) -> bool:
+    term_lower = term.lower().strip()
 
-
-# ── GOOGLE TRENDS RSS ─────────────────────────────────────────────────────
-
-def fetch_trending_sg() -> list:
-    """
-    Fetch Singapore daily trending searches from Google Trends RSS.
-    Returns list of trending terms — no pytrends, no auth, no 429s.
-    """
-    try:
-        res = requests.get(TRENDS_RSS_SG, timeout=15, headers=WIKI_HEADERS)
-        if not res.ok:
-            log.warning(f"Trends RSS error: {res.status_code}")
-            return []
-        feed    = feedparser.parse(res.content)
-        entries = feed.entries
-        terms   = []
-        for entry in entries:
-            title = entry.get("title","").strip()
-            if title:
-                terms.append(title)
-                # Also grab related queries from ht:approx_traffic or description
-                desc = entry.get("summary","")
-                # Extract any related searches from description if present
-                related = re.findall(r'<ht:related_queries>(.*?)</ht:related_queries>',
-                                     desc, re.DOTALL)
-                for r in related:
-                    queries = re.findall(r'<ht:query>(.*?)</ht:query>', r)
-                    terms.extend(queries)
-        log.info(f"  Fetched {len(terms)} trending terms from Google Trends RSS")
-        return terms
-    except Exception as e:
-        log.warning(f"Trends RSS fetch error: {e}")
-        return []
-
-
-def is_drama_related(term: str, known_shows: set, known_artists: set) -> bool:
-    """
-    Check if a trending term could be a drama show or artist.
-    Uses TMDB to verify — only called for plausible candidates.
-    """
-    term_lower = term.lower()
-
-    # Discard obvious non-drama terms
-    if any(kw in term_lower for kw in DISCARD_KEYWORDS):
+    # Too short
+    if len(term_lower) < 3:
         return False
 
-    # Accept if contains drama keywords
-    if any(kw in term_lower for kw in DRAMA_KEYWORDS):
-        return True
+    # Single CJK word blocklist
+    if term in DISCARD_SINGLE_CJK:
+        log.info(f"  ⏭  '{term}' — blocked CJK term")
+        return False
 
-    # Accept if matches a known artist name pattern (2+ words, title case)
-    words = term.split()
-    if len(words) >= 2 and all(w[0].isupper() for w in words if w):
-        return True
+    # Contains discard words
+    for word in DISCARD_WORDS:
+        if word in term_lower:
+            log.info(f"  ⏭  '{term}' — discard word '{word}'")
+            return False
 
-    return False
+    # Pure numbers or very generic single words
+    words = term_lower.split()
+    if len(words) == 1 and term_lower.isascii() and not any(
+        c.isalpha() for c in term_lower
+    ):
+        return False
+
+    # Single common English words (not names)
+    COMMON_WORDS = {
+        "the", "and", "for", "are", "but", "not", "you", "all",
+        "can", "her", "was", "one", "our", "out", "day", "get",
+        "has", "him", "his", "how", "its", "may", "new", "now",
+        "old", "see", "two", "way", "who", "any", "been", "call",
+        "come", "from", "give", "into", "just", "know", "like",
+        "look", "make", "most", "over", "said", "take", "than",
+        "that", "them", "then", "they", "this", "time", "up",
+        "use", "very", "well", "what", "when", "will", "with",
+        "would", "your",
+    }
+    if len(words) == 1 and term_lower in COMMON_WORDS:
+        return False
+
+    return True
 
 
 # ── TMDB ──────────────────────────────────────────────────────────────────
@@ -165,7 +158,7 @@ def is_movie_title(name: str) -> bool:
         if tv_hits:
             top_tv = tv_hits[0].get("name","").lower()
             if name_lower in top_tv or top_tv in name_lower: return False
-        log.info(f"  ⏭  '{name}' identified as movie — skipping")
+        log.info(f"  ⏭  '{name}' — confirmed movie, skipping")
         return True
     except Exception as e:
         log.warning(f"is_movie_title error '{name}': {e}")
@@ -182,6 +175,17 @@ def tmdb_search_show(name: str) -> dict:
         if not results: return {}
         show    = results[0]
         tmdb_id = show["id"]
+
+        # Quick confidence check — does the TMDB result name roughly match our query?
+        tmdb_name  = show.get("name","").lower()
+        name_lower = name.lower()
+        # Allow if query words appear in TMDB name or vice versa
+        query_words = set(name_lower.split())
+        tmdb_words  = set(tmdb_name.split())
+        overlap     = query_words & tmdb_words
+        if not overlap and name_lower not in tmdb_name and tmdb_name not in name_lower:
+            log.info(f"  ⏭  '{name}' — TMDB matched '{show.get('name')}' (low confidence)")
+            return {}
 
         detail = requests.get(f"{TMDB_BASE}/tv/{tmdb_id}",
                               params={"api_key":TMDB_API_KEY,"language":"en-SG",
@@ -247,13 +251,19 @@ def tmdb_search_person(name: str) -> dict:
         results = res.json().get("results",[])
         if not results: return {}
         person    = results[0]
-        # Only accept if person is known for Asian dramas
+
+        # Confidence check — name must roughly match
+        tmdb_person_name = person.get("name","").lower()
+        name_lower       = name.lower()
+        if name_lower not in tmdb_person_name and tmdb_person_name not in name_lower:
+            return {}
+
         known_for = person.get("known_for",[])
         if not known_for: return {}
 
-        show      = known_for[0]
-        show_name = show.get("name") or show.get("title","")
-        origin    = show.get("origin_country",[])
+        show       = known_for[0]
+        show_name  = show.get("name") or show.get("title","")
+        origin     = show.get("origin_country",[])
         genre_code = "others"
         if isinstance(origin,list):
             if   "KR" in origin: genre_code = "kdrama"
@@ -265,8 +275,9 @@ def tmdb_search_person(name: str) -> dict:
             elif "IN" in origin: genre_code = "indian"
             else:                genre_code = "western"
 
-        # Only insert if from Asian drama origin
+        # Only insert Asian drama artists
         if genre_code == "western":
+            log.info(f"  ⏭  '{name}' — Western artist, skipping")
             return {}
 
         role = "Actress" if person.get("gender")==1 else "Actor"
@@ -338,6 +349,23 @@ def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -
     return discovered
 
 
+# ── GOOGLE TRENDS RSS ─────────────────────────────────────────────────────
+
+def fetch_trending_sg() -> list:
+    try:
+        res = requests.get(TRENDS_RSS_SG, timeout=15, headers=WIKI_HEADERS)
+        if not res.ok:
+            log.warning(f"Trends RSS error: {res.status_code}")
+            return []
+        feed  = feedparser.parse(res.content)
+        terms = [e.get("title","").strip() for e in feed.entries if e.get("title","").strip()]
+        log.info(f"  Fetched {len(terms)} trending terms from Google Trends RSS")
+        return terms
+    except Exception as e:
+        log.warning(f"Trends RSS fetch error: {e}")
+        return []
+
+
 # ── MAIN ──────────────────────────────────────────────────────────────────
 
 def main():
@@ -362,21 +390,25 @@ def main():
 
     rss_entries = fetch_rss_entries()
 
-    # ── STEP 1: Fetch Singapore trending terms from Google Trends RSS ─────
+    # ── STEP 1: Fetch SG trending terms ──────────────────────────────────
     log.info("--- Step 1: Fetching Singapore trending terms ---")
     trending_terms = fetch_trending_sg()
 
     if not trending_terms:
         log.warning("  No trending terms fetched — skipping discovery")
     else:
-        new_shows   = 0
-        new_artists = 0
+        new_shows = 0; new_artists = 0
 
         for term in trending_terms:
             term_lower = term.lower()
-            log.info(f"  Trending: '{term}'")
 
-            # Try as a show first
+            # ── Pre-filter: discard non-drama noise ──
+            if not is_candidate(term):
+                continue
+
+            log.info(f"  Checking candidate: '{term}'")
+
+            # ── Try as a show ──
             if term_lower not in known_shows:
                 if is_movie_title(term):
                     continue
@@ -407,11 +439,11 @@ def main():
                         known_shows.add(term_lower)
                         new_shows += 1
                         log.info(f"  ✅ New show added: {term}")
-                        continue  # found as show, skip artist check
+                        continue
                     except Exception as e:
                         log.warning(f"  ❌ Show insert failed '{term}': {e}")
 
-            # Try as an artist if not found as show
+            # ── Try as an artist ──
             if term_lower not in known_artists:
                 tmdb_person = tmdb_search_person(term)
                 if tmdb_person:
@@ -436,11 +468,11 @@ def main():
                     except Exception as e:
                         log.warning(f"  ❌ Artist insert failed '{term}': {e}")
 
-            time.sleep(0.5)  # small delay between TMDB calls only
+            time.sleep(0.5)
 
-        log.info(f"  Discovery complete: {new_shows} shows, {new_artists} artists added")
+        log.info(f"  Discovery: {new_shows} shows, {new_artists} artists added")
 
-    # ── STEP 2: Discover events from RSS feeds ────────────────────────────
+    # ── STEP 2: Discover events from RSS ─────────────────────────────────
     log.info("--- Step 2: Discovering events from RSS feeds ---")
     rss_shows   = sb.table("shows_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
     rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
@@ -468,6 +500,14 @@ def main():
             log.warning(f"  ❌ RSS event insert failed: {e}")
 
     log.info("=== Discovery complete ===")
+
+
+def now_utc() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def now_sgt() -> str:
+    sgt = timezone(timedelta(hours=8))
+    return datetime.now(sgt).strftime("%Y-%m-%d %H:%M SGT")
 
 
 if __name__ == "__main__":
