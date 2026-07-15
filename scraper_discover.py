@@ -1,16 +1,17 @@
 """
 Drama Watch SG — scraper_discover.py
 
-Runs Mon/Wed/Fri at midnight SGT (16:00 UTC) via GitHub Actions.
-Only discovers new shows, artists, and events — no scoring.
-Keeping this separate from scraper_update.py reduces daily Trends API calls.
+Runs daily at 11pm SGT (15:00 UTC) via GitHub Actions.
+Uses Google Trends RSS feed instead of pytrends for discovery —
+no API key, no rate limiting, no 429s.
+
+RSS feed: https://trends.google.com/trending/rss?geo=SG
 """
 
-import os, time, json, logging, requests
+import os, time, json, logging, requests, re
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 import feedparser
-from pytrends.request import TrendReq
 from supabase import create_client
 
 load_dotenv()
@@ -24,7 +25,9 @@ TMDB_API_KEY = os.environ["TMDB_API_KEY"]
 TMDB_BASE    = "https://api.themoviedb.org/3"
 WIKI_API     = "https://en.wikipedia.org/api/rest_v1/page/summary"
 WIKI_HEADERS = {"User-Agent": "DramaWatchSG/1.0"}
-TRENDS_DELAY = 15  # longer delay — discovery only, fewer total calls
+
+# Google Trends RSS — Singapore daily trending searches (no auth, no rate limit)
+TRENDS_RSS_SG = "https://trends.google.com/trending/rss?geo=SG"
 
 TMDB_PROVIDER_MAP = {
     8: "netflix", 337: "disney", 96: "iqiyi",
@@ -33,6 +36,29 @@ TMDB_PROVIDER_MAP = {
     119: "amazon",
 }
 
+GENRE_PLATFORM_FALLBACK = {
+    "kdrama":["viu"],"cdrama":["wetv","iqiyi"],
+    "thai":["viu"],"local":["mewatch"],
+    "western":["netflix"],"others":["viu"],
+}
+
+# Keywords to identify drama-related trending terms
+DRAMA_KEYWORDS = [
+    "drama", "kdrama", "k-drama", "series", "episode", "netflix",
+    "viu", "iqiyi", "wetv", "mewatch", "disney+",
+    "korean", "chinese", "thai", "singapore", "japanese",
+    "actor", "actress", "cast", "season",
+]
+
+# Keywords to immediately discard non-drama trending terms
+DISCARD_KEYWORDS = [
+    "stock", "price", "weather", "score", "match", "game",
+    "iphone", "samsung", "covid", "election", "minister",
+    "budget", "hdb", "mrt", "airline", "flight", "hotel",
+    "recipe", "food", "restaurant", "hawker", "sgd", "forex",
+    "crypto", "bitcoin", "nft", "giveaway", "sale", "promo",
+]
+
 EVENT_TYPE_MAP = {
     "fan meet": "Fan Meet", "fan meeting": "Fan Meet", "fansign": "Fan Meet",
     "fan sign": "Fan Meet", "meet and greet": "Fan Meet", "fan party": "Fan Party",
@@ -40,39 +66,6 @@ EVENT_TYPE_MAP = {
     "pop up": "Pop-Up", "premiere": "Premiere", "screening": "Screening",
     "press conference": "Event", "media call": "Event", "brand event": "Event",
     "tour": "Concert", "appearance": "Event",
-}
-
-DISCOVERY_TERMS = {
-    "shows": [
-        "Korean drama Singapore","Chinese drama Singapore",
-        "Singapore drama","Thai drama Singapore",
-        "Western series Singapore","Japanese drama Singapore",
-        "Turkish drama Singapore","Indian drama Singapore",
-    ],
-    "artists": [
-        "Korean drama artists Singapore","Chinese drama artists Singapore",
-        "Singapore drama artists","Thai drama artists Singapore",
-        "Western series artists Singapore","Japanese drama artists Singapore",
-        "Turkish drama artists Singapore","Indian drama artists Singapore",
-    ],
-}
-
-EVENT_SUFFIXES = [
-    "Singapore concert","Singapore fan meet","Singapore tour",
-    "Singapore fan meeting","Singapore showcase",
-]
-
-TERM_TO_GENRE = {
-    "Korean drama":"kdrama","Chinese drama":"cdrama",
-    "Singapore drama":"local","Thai drama":"thai",
-    "Western series":"western","Japanese drama":"japanese",
-    "Turkish drama":"turkish","Indian drama":"indian","drama":"others",
-}
-
-GENRE_PLATFORM_FALLBACK = {
-    "kdrama":["viu"],"cdrama":["wetv","iqiyi"],
-    "thai":["viu"],"local":["mewatch"],
-    "western":["netflix"],"others":["viu"],
 }
 
 RSS_FEEDS = [
@@ -94,19 +87,62 @@ def now_sgt() -> str:
     sgt = timezone(timedelta(hours=8))
     return datetime.now(sgt).strftime("%Y-%m-%d %H:%M SGT")
 
-def term_to_genre_code(term: str) -> str:
-    for key, code in TERM_TO_GENRE.items():
-        if key.lower() in term.lower():
-            return code
-    return "others"
 
-def build_event_terms(shows: list, artists: list, limit: int = 6) -> list:
-    names = [a["name"] for a in artists[:4]] + [s["name"] for s in shows[:3]]
-    terms = []
-    for i, name in enumerate(names):
-        suffix = EVENT_SUFFIXES[i % len(EVENT_SUFFIXES)]
-        terms.append(f"{name} {suffix}")
-    return terms[:limit]
+# ── GOOGLE TRENDS RSS ─────────────────────────────────────────────────────
+
+def fetch_trending_sg() -> list:
+    """
+    Fetch Singapore daily trending searches from Google Trends RSS.
+    Returns list of trending terms — no pytrends, no auth, no 429s.
+    """
+    try:
+        res = requests.get(TRENDS_RSS_SG, timeout=15, headers=WIKI_HEADERS)
+        if not res.ok:
+            log.warning(f"Trends RSS error: {res.status_code}")
+            return []
+        feed    = feedparser.parse(res.content)
+        entries = feed.entries
+        terms   = []
+        for entry in entries:
+            title = entry.get("title","").strip()
+            if title:
+                terms.append(title)
+                # Also grab related queries from ht:approx_traffic or description
+                desc = entry.get("summary","")
+                # Extract any related searches from description if present
+                related = re.findall(r'<ht:related_queries>(.*?)</ht:related_queries>',
+                                     desc, re.DOTALL)
+                for r in related:
+                    queries = re.findall(r'<ht:query>(.*?)</ht:query>', r)
+                    terms.extend(queries)
+        log.info(f"  Fetched {len(terms)} trending terms from Google Trends RSS")
+        return terms
+    except Exception as e:
+        log.warning(f"Trends RSS fetch error: {e}")
+        return []
+
+
+def is_drama_related(term: str, known_shows: set, known_artists: set) -> bool:
+    """
+    Check if a trending term could be a drama show or artist.
+    Uses TMDB to verify — only called for plausible candidates.
+    """
+    term_lower = term.lower()
+
+    # Discard obvious non-drama terms
+    if any(kw in term_lower for kw in DISCARD_KEYWORDS):
+        return False
+
+    # Accept if contains drama keywords
+    if any(kw in term_lower for kw in DRAMA_KEYWORDS):
+        return True
+
+    # Accept if matches a known artist name pattern (2+ words, title case)
+    words = term.split()
+    if len(words) >= 2 and all(w[0].isupper() for w in words if w):
+        return True
+
+    return False
 
 
 # ── TMDB ──────────────────────────────────────────────────────────────────
@@ -211,21 +247,28 @@ def tmdb_search_person(name: str) -> dict:
         results = res.json().get("results",[])
         if not results: return {}
         person    = results[0]
+        # Only accept if person is known for Asian dramas
         known_for = person.get("known_for",[])
-        show_name = ""; genre_code = "others"
-        if known_for:
-            show      = known_for[0]
-            show_name = show.get("name") or show.get("title","")
-            origin    = show.get("origin_country",[])
-            if isinstance(origin,list):
-                if   "KR" in origin: genre_code = "kdrama"
-                elif "CN" in origin: genre_code = "cdrama"
-                elif "TH" in origin: genre_code = "thai"
-                elif "SG" in origin: genre_code = "local"
-                elif "JP" in origin: genre_code = "japanese"
-                elif "TR" in origin: genre_code = "turkish"
-                elif "IN" in origin: genre_code = "indian"
-                else:                genre_code = "western"
+        if not known_for: return {}
+
+        show      = known_for[0]
+        show_name = show.get("name") or show.get("title","")
+        origin    = show.get("origin_country",[])
+        genre_code = "others"
+        if isinstance(origin,list):
+            if   "KR" in origin: genre_code = "kdrama"
+            elif "CN" in origin: genre_code = "cdrama"
+            elif "TH" in origin: genre_code = "thai"
+            elif "SG" in origin: genre_code = "local"
+            elif "JP" in origin: genre_code = "japanese"
+            elif "TR" in origin: genre_code = "turkish"
+            elif "IN" in origin: genre_code = "indian"
+            else:                genre_code = "western"
+
+        # Only insert if from Asian drama origin
+        if genre_code == "western":
+            return {}
+
         role = "Actress" if person.get("gender")==1 else "Actor"
         return {"tmdb_id":person.get("id"),"role":role,
                 "show_name":show_name,"genre_code":genre_code,"search_term":name}
@@ -263,20 +306,6 @@ def fetch_rss_entries() -> list:
     return entries
 
 
-def enrich_event_from_rss(title: str, entries: list) -> dict:
-    title_lower = title.lower()
-    for entry in entries:
-        entry_text = (entry.get("title","")+" "+entry.get("summary","")).lower()
-        if any(w in entry_text for w in title_lower.split() if len(w)>4):
-            ev_type = "Event"
-            for t in ["fan meet","concert","screening","pop-up","awards",
-                      "exhibition","festival","showcase","premiere"]:
-                if t in entry_text: ev_type = t.title(); break
-            return {"description":entry.get("summary","")[:500],
-                    "type":ev_type,"link":entry.get("link","")}
-    return {}
-
-
 def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -> list:
     discovered = []
     names  = [(a["name"], genre_map.get(a.get("genre_id",""),"others")) for a in artists[:40]]
@@ -309,33 +338,13 @@ def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -
     return discovered
 
 
-# ── GOOGLE TRENDS ─────────────────────────────────────────────────────────
-
-def fetch_related_queries(pytrends, term: str) -> list:
-    try:
-        pytrends.build_payload([term], geo="SG", timeframe="now 7-d")
-        related = pytrends.related_queries()
-        if term not in related:
-            log.info(f"  No related queries returned for '{term}'")
-            return []
-        top = related[term].get("top")
-        if top is None or top.empty:
-            log.info(f"  Empty related queries for '{term}'")
-            return []
-        return top["query"].tolist()[:10]
-    except Exception as e:
-        log.warning(f"  Related queries error '{term}': {e}")
-        return []
-
-
 # ── MAIN ──────────────────────────────────────────────────────────────────
 
 def main():
     log.info("=== Drama Watch SG — DISCOVER scraper ===")
     log.info(f"  Run time: {now_sgt()}")
 
-    sb       = create_client(SUPABASE_URL, SUPABASE_KEY)
-    pytrends = TrendReq(hl="en-SG", tz=480, timeout=(10,25))
+    sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 
     genre_rows = sb.table("genres").select("id,code").execute().data
     genre_map  = {r["code"]:r["id"] for r in genre_rows}
@@ -353,113 +362,89 @@ def main():
 
     rss_entries = fetch_rss_entries()
 
-    # ── STEP 1: Discover new shows and artists ────────────────────────────
-    log.info("--- Step 1: Discovering new shows and artists ---")
-    for category, terms in DISCOVERY_TERMS.items():
-        for term in terms:
-            genre_code = term_to_genre_code(term)
-            queries    = fetch_related_queries(pytrends, term)
+    # ── STEP 1: Fetch Singapore trending terms from Google Trends RSS ─────
+    log.info("--- Step 1: Fetching Singapore trending terms ---")
+    trending_terms = fetch_trending_sg()
 
-            for query in queries:
-                query_lower = query.lower()
+    if not trending_terms:
+        log.warning("  No trending terms fetched — skipping discovery")
+    else:
+        new_shows   = 0
+        new_artists = 0
 
-                if category == "shows" and query_lower not in known_shows:
-                    log.info(f"  New show candidate: '{query}'")
-                    if is_movie_title(query): continue
-                    tmdb = tmdb_search_show(query)
-                    if not tmdb:
-                        log.info(f"  ⏭  '{query}' — no valid TV result, skipping")
-                        continue
-                    if not tmdb.get("description"):
-                        wiki = wiki_lookup(query)
-                        tmdb["description"] = wiki.get("description","")
+        for term in trending_terms:
+            term_lower = term.lower()
+            log.info(f"  Trending: '{term}'")
 
-                    gc        = tmdb.get("genre_code", genre_code)
+            # Try as a show first
+            if term_lower not in known_shows:
+                if is_movie_title(term):
+                    continue
+
+                tmdb_show = tmdb_search_show(term)
+                if tmdb_show:
+                    if not tmdb_show.get("description"):
+                        wiki = wiki_lookup(term)
+                        tmdb_show["description"] = wiki.get("description","")
+
+                    gc        = tmdb_show.get("genre_code","others")
                     gid       = genre_map.get(gc) or genre_map.get("others")
-                    platforms = tmdb.get("platforms",[]) or GENRE_PLATFORM_FALLBACK.get(gc,["viu"])
+                    platforms = tmdb_show.get("platforms",[]) or GENRE_PLATFORM_FALLBACK.get(gc,["viu"])
                     row = {
-                        "name":            query,
-                        "chinese_title":   tmdb.get("chinese_title"),
+                        "name":            term,
+                        "chinese_title":   tmdb_show.get("chinese_title"),
                         "genre_id":        gid,
                         "platforms":       platforms,
-                        "description":     tmdb.get("description",""),
-                        "search_term":     tmdb.get("search_term", query),
-                        "tmdb_id":         tmdb.get("tmdb_id"),
-                        "has_description": bool(tmdb.get("description","").strip()),
+                        "description":     tmdb_show.get("description",""),
+                        "search_term":     tmdb_show.get("search_term", term),
+                        "tmdb_id":         tmdb_show.get("tmdb_id"),
+                        "has_description": bool(tmdb_show.get("description","").strip()),
                         "is_active":       True,
                         "updated_at":      now_utc(),
                     }
                     try:
                         sb.table("shows_master").insert(row).execute()
-                        known_shows.add(query_lower)
-                        log.info(f"  ✅ New show added: {query}")
+                        known_shows.add(term_lower)
+                        new_shows += 1
+                        log.info(f"  ✅ New show added: {term}")
+                        continue  # found as show, skip artist check
                     except Exception as e:
-                        log.warning(f"  ❌ Show insert failed '{query}': {e}")
+                        log.warning(f"  ❌ Show insert failed '{term}': {e}")
 
-                elif category == "artists" and query_lower not in known_artists:
-                    log.info(f"  New artist candidate: '{query}'")
-                    tmdb = tmdb_search_person(query)
-                    gc   = tmdb.get("genre_code", genre_code)
-                    gid  = genre_map.get(gc) or genre_map.get("others")
-                    row  = {
-                        "name":            query,
-                        "role":            tmdb.get("role","Actor"),
-                        "show_name":       tmdb.get("show_name",""),
+            # Try as an artist if not found as show
+            if term_lower not in known_artists:
+                tmdb_person = tmdb_search_person(term)
+                if tmdb_person:
+                    gc  = tmdb_person.get("genre_code","others")
+                    gid = genre_map.get(gc) or genre_map.get("others")
+                    row = {
+                        "name":            term,
+                        "role":            tmdb_person.get("role","Actor"),
+                        "show_name":       tmdb_person.get("show_name",""),
                         "genre_id":        gid,
-                        "search_term":     query,
-                        "tmdb_id":         tmdb.get("tmdb_id"),
-                        "has_description": bool(tmdb.get("role") and tmdb.get("show_name")),
+                        "search_term":     term,
+                        "tmdb_id":         tmdb_person.get("tmdb_id"),
+                        "has_description": bool(tmdb_person.get("role") and tmdb_person.get("show_name")),
                         "is_active":       True,
                         "updated_at":      now_utc(),
                     }
                     try:
                         sb.table("artists_master").insert(row).execute()
-                        known_artists.add(query_lower)
-                        log.info(f"  ✅ New artist added: {query}")
+                        known_artists.add(term_lower)
+                        new_artists += 1
+                        log.info(f"  ✅ New artist added: {term}")
                     except Exception as e:
-                        log.warning(f"  ❌ Artist insert failed '{query}': {e}")
+                        log.warning(f"  ❌ Artist insert failed '{term}': {e}")
 
-            time.sleep(TRENDS_DELAY)
+            time.sleep(0.5)  # small delay between TMDB calls only
 
-    # ── STEP 2: Discover events from Trends ──────────────────────────────
-    log.info("--- Step 2: Discovering events from Trends ---")
-    event_terms = build_event_terms(
-        sorted(shows,   key=lambda s: s.get("name","")),
-        sorted(artists, key=lambda a: a.get("name",""))
-    )
-    for term in event_terms:
-        for query in fetch_related_queries(pytrends, term):
-            query_lower = query.lower()
-            if query_lower in known_events: continue
-            log.info(f"  New event candidate: '{query}'")
-            rss   = enrich_event_from_rss(query, rss_entries)
-            gid   = genre_map.get("others")
-            links = [{"l":"More info","u":rss["link"]}] if rss.get("link") else []
-            row   = {
-                "title":           query,
-                "genre_id":        gid,
-                "type":            rss.get("type","Event"),
-                "venue":           "",
-                "event_date":      "",
-                "description":     rss.get("description",""),
-                "links":           json.dumps(links),
-                "search_term":     query,
-                "has_description": bool(rss.get("description","").strip()),
-                "is_active":       True,
-                "updated_at":      now_utc(),
-            }
-            try:
-                sb.table("events_master").insert(row).execute()
-                known_events.add(query_lower)
-                log.info(f"  ✅ New event added: {query[:50]}")
-            except Exception as e:
-                log.warning(f"  ❌ Event insert failed '{query}': {e}")
-        time.sleep(TRENDS_DELAY)
+        log.info(f"  Discovery complete: {new_shows} shows, {new_artists} artists added")
 
-    # ── STEP 3: Discover events from RSS ─────────────────────────────────
-    log.info("--- Step 3: Discovering events from RSS feeds ---")
+    # ── STEP 2: Discover events from RSS feeds ────────────────────────────
+    log.info("--- Step 2: Discovering events from RSS feeds ---")
     rss_shows   = sb.table("shows_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
     rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
+
     for ev in discover_events_from_rss(rss_entries, rss_artists, rss_shows, known_events, genre_map):
         gid   = genre_map.get(ev["genre_code"]) or genre_map.get("others")
         links = [{"l":"More info","u":ev["link"]}] if ev.get("link") else []
