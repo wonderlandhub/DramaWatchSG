@@ -2,11 +2,16 @@
 Drama Watch SG — scraper_discover.py
 
 Runs daily at 11pm SGT (15:00 UTC) via GitHub Actions.
-Uses Google Trends RSS feed instead of pytrends — no 429s.
+
+Discovery strategy — uses TMDB APIs directly (no pytrends, no 429s):
+  1. TMDB Trending TV (week) — globally trending shows right now
+  2. TMDB Discover — new shows by country aired in last 60 days
+     Covers: KR, CN, TW, TH, SG, JP, TR, IN
+  3. RSS event discovery from SG entertainment news feeds
 """
 
-import os, time, json, logging, requests, re
-from datetime import datetime, timezone, timedelta
+import os, time, json, logging, requests
+from datetime import datetime, timezone, timedelta, date
 from dotenv import load_dotenv
 import feedparser
 from supabase import create_client
@@ -23,8 +28,6 @@ TMDB_BASE    = "https://api.themoviedb.org/3"
 WIKI_API     = "https://en.wikipedia.org/api/rest_v1/page/summary"
 WIKI_HEADERS = {"User-Agent": "DramaWatchSG/1.0"}
 
-TRENDS_RSS_SG = "https://trends.google.com/trending/rss?geo=SG"
-
 TMDB_PROVIDER_MAP = {
     8: "netflix", 337: "disney", 96: "iqiyi",
     422: "wetv", 458: "viu", 2018: "mewatch",
@@ -33,9 +36,22 @@ TMDB_PROVIDER_MAP = {
 }
 
 GENRE_PLATFORM_FALLBACK = {
-    "kdrama":["viu"],"cdrama":["wetv","iqiyi"],
-    "thai":["viu"],"local":["mewatch"],
-    "western":["netflix"],"others":["viu"],
+    "kdrama":["viu"], "cdrama":["wetv","iqiyi"],
+    "thai":["viu"],   "local":["mewatch"],
+    "western":["netflix"], "others":["viu"],
+    "japanese":["netflix"], "turkish":["netflix"], "indian":["amazon"],
+}
+
+# Countries to discover — mapped to genre codes
+DISCOVER_COUNTRIES = {
+    "KR": "kdrama",
+    "CN": "cdrama",
+    "TW": "cdrama",
+    "TH": "thai",
+    "SG": "local",
+    "JP": "japanese",
+    "TR": "turkish",
+    "IN": "indian",
 }
 
 EVENT_TYPE_MAP = {
@@ -56,240 +72,143 @@ RSS_FEEDS = [
     "https://www.soompi.com/feed",
 ]
 
-# ── FILTER LISTS ──────────────────────────────────────────────────────────
 
-# Immediately discard if ANY of these words appear in the term
-DISCARD_WORDS = {
-    # Sports
-    "vs", "fc", "match", "score", "league", "cup", "cricket", "football",
-    "tennis", "golf", "swimming", "athletics", "olympic", "paralympic",
-    "badminton", "basketball", "volleyball", "handball", "cycling",
-    # Politics / Government
-    "minister", "parliament", "election", "government", "policy", "budget",
-    "govtech", "cpf", "hdb", "mrt", "lta", "moh", "moe", "mindef",
-    "singlish", "singapore", "sg", "pm ", "mp ",
-    # Finance
-    "stock", "sgd", "usd", "forex", "crypto", "bitcoin", "nft", "ipo",
-    "bank", "interest", "rate", "inflation", "recession", "fund",
-    # Tech / Products
-    "iphone", "samsung", "apple", "google", "microsoft", "android",
-    "laptop", "tablet", "gaming", "gpu", "cpu", "ai ",
-    # Food / Lifestyle
-    "recipe", "food", "restaurant", "hawker", "cafe", "coffee", "bubble tea",
-    "hotel", "flight", "airline", "travel", "visa", "passport",
-    # Legal / News
-    "litigants", "lawsuit", "court", "accused", "arrested", "charged",
-    "vexatious", "tribunal", "verdict", "sentence",
-    # Generic trending noise
-    "death", "dead", "died", "murder", "accident", "crash",
-    "weather", "haze", "rain", "flood", "earthquake",
-    "sale", "promo", "discount", "giveaway", "lucky draw",
-    "covid", "dengue", "mpox", "virus", "vaccine",
-    "zodiac", "horoscope", "astrology",
-}
+# ── HELPERS ───────────────────────────────────────────────────────────────
 
-# Single-word Chinese/Korean/Japanese terms that are NOT drama titles
-DISCARD_SINGLE_CJK = {
-    "巴士", "公车", "地铁", "飞机", "酒店", "天气", "新加坡",
-    "韩国", "中国", "日本", "泰国", "美国", "英国",
-}
+def now_utc() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
-# Only proceed to TMDB if term passes ALL these checks
-def is_candidate(term: str) -> bool:
-    term_lower = term.lower().strip()
+def now_sgt() -> str:
+    sgt = timezone(timedelta(hours=8))
+    return datetime.now(sgt).strftime("%Y-%m-%d %H:%M SGT")
 
-    # Too short
-    if len(term_lower) < 3:
-        return False
 
-    # Single CJK word blocklist
-    if term in DISCARD_SINGLE_CJK:
-        log.info(f"  ⏭  '{term}' — blocked CJK term")
-        return False
+# ── TMDB DISCOVERY ────────────────────────────────────────────────────────
 
-    # Contains discard words
-    for word in DISCARD_WORDS:
-        if word in term_lower:
-            log.info(f"  ⏭  '{term}' — discard word '{word}'")
-            return False
+def tmdb_trending_shows() -> list:
+    """
+    Fetch globally trending TV shows this week from TMDB.
+    Returns list of show dicts with id, name, origin_country.
+    """
+    try:
+        res = requests.get(
+            f"{TMDB_BASE}/trending/tv/week",
+            params={"api_key": TMDB_API_KEY, "language": "en-SG"},
+            timeout=10
+        )
+        if not res.ok: return []
+        results = res.json().get("results", [])
+        log.info(f"  TMDB Trending: {len(results)} shows")
+        return results
+    except Exception as e:
+        log.warning(f"TMDB trending error: {e}"); return []
 
-    # Pure numbers or very generic single words
-    words = term_lower.split()
-    if len(words) == 1 and term_lower.isascii() and not any(
-        c.isalpha() for c in term_lower
-    ):
-        return False
 
-    # Single common English words (not names)
-    COMMON_WORDS = {
-        "the", "and", "for", "are", "but", "not", "you", "all",
-        "can", "her", "was", "one", "our", "out", "day", "get",
-        "has", "him", "his", "how", "its", "may", "new", "now",
-        "old", "see", "two", "way", "who", "any", "been", "call",
-        "come", "from", "give", "into", "just", "know", "like",
-        "look", "make", "most", "over", "said", "take", "than",
-        "that", "them", "then", "they", "this", "time", "up",
-        "use", "very", "well", "what", "when", "will", "with",
-        "would", "your",
+def tmdb_discover_by_country(country: str, days_back: int = 60) -> list:
+    """
+    Fetch recently aired shows from a specific country using TMDB Discover.
+    Sorted by popularity — catches new shows as soon as they appear on TMDB.
+    """
+    try:
+        since = (date.today() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        res = requests.get(
+            f"{TMDB_BASE}/discover/tv",
+            params={
+                "api_key":              TMDB_API_KEY,
+                "language":             "en-SG",
+                "with_origin_country":  country,
+                "sort_by":              "popularity.desc",
+                "first_air_date.gte":   since,
+                "page":                 1,
+            },
+            timeout=10
+        )
+        if not res.ok: return []
+        results = res.json().get("results", [])
+        log.info(f"  TMDB Discover {country}: {len(results)} shows since {since}")
+        return results
+    except Exception as e:
+        log.warning(f"TMDB discover error ({country}): {e}"); return []
+
+
+def tmdb_get_detail(tmdb_id: int) -> dict:
+    """Fetch full TV show detail including providers and alternative titles."""
+    try:
+        res = requests.get(
+            f"{TMDB_BASE}/tv/{tmdb_id}",
+            params={
+                "api_key":              TMDB_API_KEY,
+                "language":             "en-SG",
+                "append_to_response":   "watch/providers,alternative_titles",
+            },
+            timeout=10
+        )
+        if not res.ok: return {}
+        return res.json()
+    except Exception as e:
+        log.warning(f"TMDB detail error ({tmdb_id}): {e}"); return {}
+
+
+def build_show_row(name: str, detail: dict, genre_map: dict,
+                   fallback_genre: str = "others") -> dict | None:
+    """
+    Build a shows_master row from TMDB detail.
+    Returns None if show fails validation (movie, no episodes, etc.)
+    """
+    num_seasons  = detail.get("number_of_seasons") or 0
+    num_episodes = detail.get("number_of_episodes") or 0
+    if num_seasons == 0 or num_episodes == 0:
+        log.info(f"  ⏭  '{name}' — no TV structure (seasons={num_seasons}, eps={num_episodes})")
+        return None
+    if detail.get("type","").lower() == "movie":
+        log.info(f"  ⏭  '{name}' — TMDB type=movie")
+        return None
+
+    # Platforms available in SG
+    sg = detail.get("watch/providers",{}).get("results",{}).get("SG",{})
+    platforms = []
+    for p in sg.get("flatrate",[]):
+        code = TMDB_PROVIDER_MAP.get(p.get("provider_id"))
+        if code and code not in platforms: platforms.append(code)
+
+    # Chinese/Korean alternative title
+    alt_titles    = detail.get("alternative_titles",{}).get("results",[])
+    chinese_title = None
+    for t in alt_titles:
+        if t.get("iso_3166_1") in ["CN","TW","HK","KR"]:
+            chinese_title = t.get("title"); break
+
+    # Genre from origin country
+    origin = detail.get("origin_country",[])
+    if   "KR" in origin: genre_code = "kdrama"
+    elif "CN" in origin or "TW" in origin: genre_code = "cdrama"
+    elif "TH" in origin: genre_code = "thai"
+    elif "SG" in origin: genre_code = "local"
+    elif "JP" in origin: genre_code = "japanese"
+    elif "TR" in origin: genre_code = "turkish"
+    elif "IN" in origin: genre_code = "indian"
+    else:                genre_code = fallback_genre
+
+    gid       = genre_map.get(genre_code) or genre_map.get("others")
+    platforms = platforms or GENRE_PLATFORM_FALLBACK.get(genre_code, ["viu"])
+
+    return {
+        "name":            name,
+        "chinese_title":   chinese_title,
+        "genre_id":        gid,
+        "platforms":       platforms,
+        "description":     detail.get("overview",""),
+        "search_term":     f"{name} drama",
+        "tmdb_id":         detail.get("id"),
+        "has_description": bool(detail.get("overview","").strip()),
+        "is_active":       True,
+        "updated_at":      now_utc(),
     }
-    if len(words) == 1 and term_lower in COMMON_WORDS:
-        return False
-
-    return True
 
 
-# ── TMDB ──────────────────────────────────────────────────────────────────
+# ── WIKIPEDIA FALLBACK ────────────────────────────────────────────────────
 
-def is_movie_title(name: str) -> bool:
-    try:
-        movie_res = requests.get(f"{TMDB_BASE}/search/movie",
-                                 params={"api_key":TMDB_API_KEY,"query":name,"language":"en-SG"},
-                                 timeout=10)
-        tv_res    = requests.get(f"{TMDB_BASE}/search/tv",
-                                 params={"api_key":TMDB_API_KEY,"query":name,"language":"en-SG"},
-                                 timeout=10)
-        movie_hits = movie_res.json().get("results",[]) if movie_res.ok else []
-        tv_hits    = tv_res.json().get("results",[])    if tv_res.ok    else []
-
-        if not movie_hits: return False
-        top_movie  = movie_hits[0].get("title","").lower()
-        name_lower = name.lower()
-        if name_lower not in top_movie and top_movie not in name_lower: return False
-        if tv_hits:
-            top_tv = tv_hits[0].get("name","").lower()
-            if name_lower in top_tv or top_tv in name_lower: return False
-        log.info(f"  ⏭  '{name}' — confirmed movie, skipping")
-        return True
-    except Exception as e:
-        log.warning(f"is_movie_title error '{name}': {e}")
-        return False
-
-
-def tmdb_search_show(name: str) -> dict:
-    try:
-        res = requests.get(f"{TMDB_BASE}/search/tv",
-                           params={"api_key":TMDB_API_KEY,"query":name,"language":"en-SG"},
-                           timeout=10)
-        if not res.ok: return {}
-        results = res.json().get("results",[])
-        if not results: return {}
-        show    = results[0]
-        tmdb_id = show["id"]
-
-        # Quick confidence check — does the TMDB result name roughly match our query?
-        tmdb_name  = show.get("name","").lower()
-        name_lower = name.lower()
-        # Allow if query words appear in TMDB name or vice versa
-        query_words = set(name_lower.split())
-        tmdb_words  = set(tmdb_name.split())
-        overlap     = query_words & tmdb_words
-        if not overlap and name_lower not in tmdb_name and tmdb_name not in name_lower:
-            log.info(f"  ⏭  '{name}' — TMDB matched '{show.get('name')}' (low confidence)")
-            return {}
-
-        detail = requests.get(f"{TMDB_BASE}/tv/{tmdb_id}",
-                              params={"api_key":TMDB_API_KEY,"language":"en-SG",
-                                      "append_to_response":"watch/providers,alternative_titles"},
-                              timeout=10)
-        if not detail.ok:
-            return {"tmdb_id":tmdb_id,"description":show.get("overview","")}
-
-        d = detail.json()
-
-        num_seasons  = d.get("number_of_seasons") or 0
-        num_episodes = d.get("number_of_episodes") or 0
-        if num_seasons == 0 or num_episodes == 0:
-            log.info(f"  ⏭  '{name}' — no TV structure (seasons={num_seasons}, eps={num_episodes})")
-            return {}
-        if d.get("type","").lower() == "movie":
-            log.info(f"  ⏭  '{name}' — TMDB type=movie")
-            return {}
-
-        sg = d.get("watch/providers",{}).get("results",{}).get("SG",{})
-        platforms = []
-        for p in sg.get("flatrate",[]):
-            code = TMDB_PROVIDER_MAP.get(p.get("provider_id"))
-            if code and code not in platforms: platforms.append(code)
-
-        alt_titles    = d.get("alternative_titles",{}).get("results",[])
-        chinese_title = None
-        for t in alt_titles:
-            if t.get("iso_3166_1") in ["CN","TW","HK","KR"]:
-                chinese_title = t.get("title"); break
-
-        origin = d.get("origin_country",[])
-        if   "KR" in origin: genre_code = "kdrama"
-        elif "CN" in origin or "TW" in origin: genre_code = "cdrama"
-        elif "TH" in origin: genre_code = "thai"
-        elif "SG" in origin: genre_code = "local"
-        elif "JP" in origin: genre_code = "japanese"
-        elif "TR" in origin: genre_code = "turkish"
-        elif "IN" in origin: genre_code = "indian"
-        else:                genre_code = "western"
-
-        last_air = d.get("last_air_date","")
-        is_new   = d.get("status","") in ["Returning Series","In Production"]
-        if last_air:
-            try:
-                days_ago = (datetime.now()-datetime.strptime(last_air,"%Y-%m-%d")).days
-                is_new   = days_ago <= 14
-            except: pass
-
-        return {"tmdb_id":tmdb_id,"description":d.get("overview",""),
-                "chinese_title":chinese_title,"platforms":platforms,
-                "genre_code":genre_code,"is_new":is_new,"search_term":f"{name} drama"}
-    except Exception as e:
-        log.warning(f"TMDB show error '{name}': {e}"); return {}
-
-
-def tmdb_search_person(name: str) -> dict:
-    try:
-        res = requests.get(f"{TMDB_BASE}/search/person",
-                           params={"api_key":TMDB_API_KEY,"query":name,"language":"en-SG"},
-                           timeout=10)
-        if not res.ok: return {}
-        results = res.json().get("results",[])
-        if not results: return {}
-        person    = results[0]
-
-        # Confidence check — name must roughly match
-        tmdb_person_name = person.get("name","").lower()
-        name_lower       = name.lower()
-        if name_lower not in tmdb_person_name and tmdb_person_name not in name_lower:
-            return {}
-
-        known_for = person.get("known_for",[])
-        if not known_for: return {}
-
-        show       = known_for[0]
-        show_name  = show.get("name") or show.get("title","")
-        origin     = show.get("origin_country",[])
-        genre_code = "others"
-        if isinstance(origin,list):
-            if   "KR" in origin: genre_code = "kdrama"
-            elif "CN" in origin: genre_code = "cdrama"
-            elif "TH" in origin: genre_code = "thai"
-            elif "SG" in origin: genre_code = "local"
-            elif "JP" in origin: genre_code = "japanese"
-            elif "TR" in origin: genre_code = "turkish"
-            elif "IN" in origin: genre_code = "indian"
-            else:                genre_code = "western"
-
-        # Only insert Asian drama artists
-        if genre_code == "western":
-            log.info(f"  ⏭  '{name}' — Western artist, skipping")
-            return {}
-
-        role = "Actress" if person.get("gender")==1 else "Actor"
-        return {"tmdb_id":person.get("id"),"role":role,
-                "show_name":show_name,"genre_code":genre_code,"search_term":name}
-    except Exception as e:
-        log.warning(f"TMDB person error '{name}': {e}"); return {}
-
-
-# ── WIKIPEDIA ─────────────────────────────────────────────────────────────
-
-def wiki_lookup(name: str) -> dict:
+def wiki_lookup(name: str) -> str:
     try:
         wiki_name = name.replace(" ","_")
         for suffix in ["","_TV_series"]:
@@ -298,13 +217,13 @@ def wiki_lookup(name: str) -> dict:
             if res.ok and res.json().get("type") != "disambiguation":
                 desc      = res.json().get("extract","")
                 sentences = desc.split(". ")
-                return {"description":". ".join(sentences[:2])+("." if len(sentences)>1 else "")}
-        return {}
+                return ". ".join(sentences[:2]) + ("." if len(sentences)>1 else "")
+        return ""
     except Exception as e:
-        log.warning(f"Wikipedia error '{name}': {e}"); return {}
+        log.warning(f"Wikipedia error '{name}': {e}"); return ""
 
 
-# ── RSS ───────────────────────────────────────────────────────────────────
+# ── RSS EVENT DISCOVERY ───────────────────────────────────────────────────
 
 def fetch_rss_entries() -> list:
     entries = []
@@ -341,29 +260,14 @@ def discover_events_from_rss(entries, artists, shows, known_events, genre_map) -
             if event_title.lower() in known_events or search_term.lower() in known_events:
                 continue
             log.info(f"  RSS event found: '{event_title}' (artist: {name})")
-            discovered.append({"title":event_title,"search_term":search_term,
-                                "type":ev_type,"description":summary_text[:500],
-                                "link":link,"genre_code":genre_code})
+            discovered.append({
+                "title":event_title,"search_term":search_term,
+                "type":ev_type,"description":summary_text[:500],
+                "link":link,"genre_code":genre_code,
+            })
             known_events.add(event_title.lower())
             break
     return discovered
-
-
-# ── GOOGLE TRENDS RSS ─────────────────────────────────────────────────────
-
-def fetch_trending_sg() -> list:
-    try:
-        res = requests.get(TRENDS_RSS_SG, timeout=15, headers=WIKI_HEADERS)
-        if not res.ok:
-            log.warning(f"Trends RSS error: {res.status_code}")
-            return []
-        feed  = feedparser.parse(res.content)
-        terms = [e.get("title","").strip() for e in feed.entries if e.get("title","").strip()]
-        log.info(f"  Fetched {len(terms)} trending terms from Google Trends RSS")
-        return terms
-    except Exception as e:
-        log.warning(f"Trends RSS fetch error: {e}")
-        return []
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────
@@ -377,103 +281,107 @@ def main():
     genre_rows = sb.table("genres").select("id,code").execute().data
     genre_map  = {r["code"]:r["id"] for r in genre_rows}
 
-    shows   = sb.table("shows_master").select("id,name,search_term").eq("is_active",True).execute().data or []
-    artists = sb.table("artists_master").select("id,name,search_term").eq("is_active",True).execute().data or []
+    shows   = sb.table("shows_master").select("id,name,search_term,tmdb_id").eq("is_active",True).execute().data or []
+    artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
     events  = sb.table("events_master").select("id,title,search_term").eq("is_active",True).execute().data or []
     log.info(f"Active: {len(shows)} shows, {len(artists)} artists, {len(events)} events")
 
-    known_shows   = {s["name"].lower() for s in shows}
-    known_shows  |= {s["search_term"].lower() for s in shows if s.get("search_term")}
-    known_artists = {a["name"].lower() for a in artists}
-    known_artists |= {a["search_term"].lower() for a in artists if a.get("search_term")}
-    known_events  = {e["title"].lower() for e in events}
+    # Build lookup sets — by name, search_term AND tmdb_id to avoid duplicates
+    known_names  = {s["name"].lower() for s in shows}
+    known_names |= {s["search_term"].lower() for s in shows if s.get("search_term")}
+    known_tmdb   = {s["tmdb_id"] for s in shows if s.get("tmdb_id")}
+    known_events = {e["title"].lower() for e in events}
 
     rss_entries = fetch_rss_entries()
+    new_shows   = 0
 
-    # ── STEP 1: Fetch SG trending terms ──────────────────────────────────
-    log.info("--- Step 1: Fetching Singapore trending terms ---")
-    trending_terms = fetch_trending_sg()
+    # ── STEP 1: TMDB Trending TV this week ───────────────────────────────
+    log.info("--- Step 1: TMDB Trending TV (week) ---")
+    trending = tmdb_trending_shows()
 
-    if not trending_terms:
-        log.warning("  No trending terms fetched — skipping discovery")
-    else:
-        new_shows = 0; new_artists = 0
+    for show in trending:
+        tmdb_id    = show.get("id")
+        name       = show.get("name","").strip()
+        origin     = show.get("origin_country",[])
+        name_lower = name.lower()
 
-        for term in trending_terms:
-            term_lower = term.lower()
+        if not name or not tmdb_id: continue
+        if tmdb_id in known_tmdb:
+            log.info(f"  Already known: '{name}'")
+            continue
+        if name_lower in known_names: continue
 
-            # ── Pre-filter: discard non-drama noise ──
-            if not is_candidate(term):
+        # Only keep Asian + Western dramas, skip reality/talk shows
+        # Check origin country is one we track
+        tracked = any(c in origin for c in DISCOVER_COUNTRIES.keys())
+        if not tracked:
+            log.info(f"  ⏭  '{name}' — origin {origin} not tracked")
+            continue
+
+        log.info(f"  Trending candidate: '{name}' ({origin})")
+        detail = tmdb_get_detail(tmdb_id)
+        if not detail: continue
+
+        row = build_show_row(name, detail, genre_map)
+        if not row: continue
+
+        if not row["description"]:
+            row["description"]     = wiki_lookup(name)
+            row["has_description"] = bool(row["description"])
+
+        try:
+            sb.table("shows_master").insert(row).execute()
+            known_names.add(name_lower)
+            known_tmdb.add(tmdb_id)
+            new_shows += 1
+            log.info(f"  ✅ New show added: {name} ({row.get('genre_id')})")
+        except Exception as e:
+            log.warning(f"  ❌ Insert failed '{name}': {e}")
+
+        time.sleep(0.3)
+
+    # ── STEP 2: TMDB Discover by country — new shows last 60 days ────────
+    log.info("--- Step 2: TMDB Discover by country ---")
+
+    for country, fallback_genre in DISCOVER_COUNTRIES.items():
+        candidates = tmdb_discover_by_country(country, days_back=60)
+
+        for show in candidates:
+            tmdb_id    = show.get("id")
+            name       = show.get("name","").strip()
+            name_lower = name.lower()
+
+            if not name or not tmdb_id: continue
+            if tmdb_id in known_tmdb:
                 continue
+            if name_lower in known_names: continue
 
-            log.info(f"  Checking candidate: '{term}'")
+            log.info(f"  Discover candidate [{country}]: '{name}'")
+            detail = tmdb_get_detail(tmdb_id)
+            if not detail: continue
 
-            # ── Try as a show ──
-            if term_lower not in known_shows:
-                if is_movie_title(term):
-                    continue
+            row = build_show_row(name, detail, genre_map, fallback_genre)
+            if not row: continue
 
-                tmdb_show = tmdb_search_show(term)
-                if tmdb_show:
-                    if not tmdb_show.get("description"):
-                        wiki = wiki_lookup(term)
-                        tmdb_show["description"] = wiki.get("description","")
+            if not row["description"]:
+                row["description"]     = wiki_lookup(name)
+                row["has_description"] = bool(row["description"])
 
-                    gc        = tmdb_show.get("genre_code","others")
-                    gid       = genre_map.get(gc) or genre_map.get("others")
-                    platforms = tmdb_show.get("platforms",[]) or GENRE_PLATFORM_FALLBACK.get(gc,["viu"])
-                    row = {
-                        "name":            term,
-                        "chinese_title":   tmdb_show.get("chinese_title"),
-                        "genre_id":        gid,
-                        "platforms":       platforms,
-                        "description":     tmdb_show.get("description",""),
-                        "search_term":     tmdb_show.get("search_term", term),
-                        "tmdb_id":         tmdb_show.get("tmdb_id"),
-                        "has_description": bool(tmdb_show.get("description","").strip()),
-                        "is_active":       True,
-                        "updated_at":      now_utc(),
-                    }
-                    try:
-                        sb.table("shows_master").insert(row).execute()
-                        known_shows.add(term_lower)
-                        new_shows += 1
-                        log.info(f"  ✅ New show added: {term}")
-                        continue
-                    except Exception as e:
-                        log.warning(f"  ❌ Show insert failed '{term}': {e}")
+            try:
+                sb.table("shows_master").insert(row).execute()
+                known_names.add(name_lower)
+                known_tmdb.add(tmdb_id)
+                new_shows += 1
+                log.info(f"  ✅ New show added: {name}")
+            except Exception as e:
+                log.warning(f"  ❌ Insert failed '{name}': {e}")
 
-            # ── Try as an artist ──
-            if term_lower not in known_artists:
-                tmdb_person = tmdb_search_person(term)
-                if tmdb_person:
-                    gc  = tmdb_person.get("genre_code","others")
-                    gid = genre_map.get(gc) or genre_map.get("others")
-                    row = {
-                        "name":            term,
-                        "role":            tmdb_person.get("role","Actor"),
-                        "show_name":       tmdb_person.get("show_name",""),
-                        "genre_id":        gid,
-                        "search_term":     term,
-                        "tmdb_id":         tmdb_person.get("tmdb_id"),
-                        "has_description": bool(tmdb_person.get("role") and tmdb_person.get("show_name")),
-                        "is_active":       True,
-                        "updated_at":      now_utc(),
-                    }
-                    try:
-                        sb.table("artists_master").insert(row).execute()
-                        known_artists.add(term_lower)
-                        new_artists += 1
-                        log.info(f"  ✅ New artist added: {term}")
-                    except Exception as e:
-                        log.warning(f"  ❌ Artist insert failed '{term}': {e}")
+            time.sleep(0.3)
 
-            time.sleep(0.5)
+    log.info(f"--- Discovery complete: {new_shows} new shows added ---")
 
-        log.info(f"  Discovery: {new_shows} shows, {new_artists} artists added")
-
-    # ── STEP 2: Discover events from RSS ─────────────────────────────────
-    log.info("--- Step 2: Discovering events from RSS feeds ---")
+    # ── STEP 3: RSS event discovery ───────────────────────────────────────
+    log.info("--- Step 3: Discovering events from RSS feeds ---")
     rss_shows   = sb.table("shows_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
     rss_artists = sb.table("artists_master").select("id,name,genre_id").eq("is_active",True).execute().data or []
 
@@ -500,14 +408,6 @@ def main():
             log.warning(f"  ❌ RSS event insert failed: {e}")
 
     log.info("=== Discovery complete ===")
-
-
-def now_utc() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-def now_sgt() -> str:
-    sgt = timezone(timedelta(hours=8))
-    return datetime.now(sgt).strftime("%Y-%m-%d %H:%M SGT")
 
 
 if __name__ == "__main__":
